@@ -27,18 +27,22 @@ export default defineConfig({
 		},
 		{ name: 'mobile-webkit', use: { ...devices['iPhone 15'] } }
 	],
-	webServer: [
-		{
-			command: 'node tests/e2e/mock-pb/server.ts',
-			url: `${MOCK_PB}/api/health`,
-			reuseExistingServer: !process.env.CI
-		},
-		{
-			command: 'npm run build && node build',
-			url: `${APP}/`,
-			env: { ORIGIN: APP, PORT: '4173', POCKETBASE_URL: MOCK_PB },
-			reuseExistingServer: !process.env.CI,
-			timeout: 180_000
-		}
-	]
+	// Against the real Rivendell (smoke-real.spec.ts) the app is already running elsewhere.
+	webServer:
+		process.env.E2E_REAL_PB === '1'
+			? []
+			: [
+					{
+						command: 'node tests/e2e/mock-pb/server.ts',
+						url: `${MOCK_PB}/api/health`,
+						reuseExistingServer: !process.env.CI
+					},
+					{
+						command: 'npm run build && node build',
+						url: `${APP}/`,
+						env: { ORIGIN: APP, PORT: '4173', POCKETBASE_URL: MOCK_PB },
+						reuseExistingServer: !process.env.CI,
+						timeout: 180_000
+					}
+				]
 });
