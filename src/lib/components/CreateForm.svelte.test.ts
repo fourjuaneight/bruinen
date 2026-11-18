@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { getCollection, type CollectionDef } from '../collections.ts';
 import CreateForm from './CreateForm.svelte';
@@ -78,5 +78,14 @@ describe('CreateForm', () => {
 		render(CreateForm, { def: articles, meta, form: null, submitting: true });
 		const button = page.getByRole('button', { name: 'Archiving… this can take a few minutes' });
 		await expect.element(button).toBeDisabled();
+	});
+
+	it('cancels without submitting', async () => {
+		const oncancel = vi.fn();
+		render(CreateForm, { def: movies, meta, form: null, submitting: false, oncancel });
+		const cancel = page.getByRole('button', { name: 'Cancel' });
+		await expect.element(cancel).toHaveAttribute('type', 'button');
+		await cancel.click();
+		expect(oncancel).toHaveBeenCalledOnce();
 	});
 });

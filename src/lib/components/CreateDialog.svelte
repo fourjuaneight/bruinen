@@ -27,6 +27,22 @@
 		}
 	});
 
+	// Light dismiss: close when a click both starts and ends on the backdrop. Starting inside
+	// (e.g. selecting text in an input and releasing outside) must not close the form, and
+	// clicks from the nested scan dialog never target this dialog itself.
+	let pressedOnBackdrop = false;
+
+	function onBackdrop(event: PointerEvent | MouseEvent) {
+		if (!dialog || event.target !== dialog) return false;
+		const box = dialog.getBoundingClientRect();
+		return (
+			event.clientX < box.left ||
+			event.clientX > box.right ||
+			event.clientY < box.top ||
+			event.clientY > box.bottom
+		);
+	}
+
 	const submit: SubmitFunction = () => {
 		submitting = true;
 		return async ({ result, update }) => {
@@ -54,13 +70,18 @@
 	aria-labelledby="create-title"
 	open={failed}
 	onclose={() => opener?.focus()}
+	onpointerdown={(event) => (pressedOnBackdrop = onBackdrop(event))}
+	onclick={(event) => {
+		if (pressedOnBackdrop && onBackdrop(event)) dialog?.close();
+		pressedOnBackdrop = false;
+	}}
 >
 	<div class="dialog-header">
 		<h2 id="create-title">New {def.label}</h2>
 		<button type="button" aria-label="Close" onclick={() => dialog?.close()}>✕</button>
 	</div>
 	<form method="POST" action="?/create" novalidate use:enhance={submit}>
-		<CreateForm {def} {meta} {form} {submitting} />
+		<CreateForm {def} {meta} {form} {submitting} oncancel={() => dialog?.close()} />
 	</form>
 </dialog>
 

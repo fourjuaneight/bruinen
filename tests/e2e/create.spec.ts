@@ -79,3 +79,35 @@ test('Esc closes the dialog and returns focus to the opener', async ({ page }) =
 	await expect(page.getByRole('dialog', { name: 'New Movies' })).toBeHidden();
 	await expect(opener).toBeFocused();
 });
+
+test('clicking outside the dialog closes it', async ({ page }) => {
+	await page.goto('/movies');
+	const opener = page.getByRole('button', { name: 'New Movies' });
+	await opener.click();
+	const dialog = page.getByRole('dialog', { name: 'New Movies' });
+	await expect(dialog).toBeVisible();
+
+	// A click inside leaves it open.
+	await dialog.getByLabel('Title').click();
+	await expect(dialog).toBeVisible();
+
+	// Dragging a selection from an input out onto the backdrop leaves it open too.
+	const title = await dialog.getByLabel('Title').boundingBox();
+	await page.mouse.move(title!.x + 5, title!.y + 5);
+	await page.mouse.down();
+	await page.mouse.move(2, 2);
+	await page.mouse.up();
+	await expect(dialog).toBeVisible();
+
+	await page.mouse.click(2, 2);
+	await expect(dialog).toBeHidden();
+	await expect(opener).toBeFocused();
+});
+
+test('Cancel closes the dialog', async ({ page }) => {
+	await page.goto('/movies');
+	await page.getByRole('button', { name: 'New Movies' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New Movies' });
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(dialog).toBeHidden();
+});
