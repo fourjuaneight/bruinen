@@ -1,54 +1,88 @@
-# sv
+# Bruinen
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A mobile-first web app for browsing, searching and adding records to
+[Rivendell](../rivendell), the PocketBase-backed media catalog. It runs on the tailnet only, at
+`https://bruinen.<your-tailnet>.ts.net`, next to Rivendell.
 
-## Creating a project
+- Browse every Rivendell collection as a table, or as cover cards for movies, shows, games,
+  books, CDs, vinyls and MTG.
+- Search and sort, with all list state in the URL.
+- Add records through Rivendell's create API, including barcode/ISBN scanning with the phone camera.
+- Sign in with a Rivendell **superuser** account. The session lives in an httpOnly cookie, and
+  the browser never talks to PocketBase directly.
 
-If you're seeing this, you've probably already done this step. Congrats!
+Bruinen only reads and creates. It never edits or deletes records.
 
-```sh
-# create a new project
-npx sv create my-app
-```
+Design: [docs/superpowers/specs/2026-11-18-bruinen-frontend-design.md](docs/superpowers/specs/2026-11-18-bruinen-frontend-design.md)
 
-To recreate this project with the same configuration:
+## Stack
 
-```sh
-# recreate this project
-npx sv@1.5.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright="demo:no" sveltekit-adapter="adapter:node" --install npm .
-```
+SvelteKit 3 (Svelte 5, `adapter-node`) on Node 24, the `pocketbase` JS SDK on the server,
+plain CSS, and `barcode-detector` (native `BarcodeDetector` where available, otherwise a
+self-hosted zxing WASM build for iOS Safari).
 
-## Adding features
-
-Add features to your project with `sv add`:
-
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
+## Develop
 
 ```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm ci
+cp .env.example .env   # point POCKETBASE_URL at Rivendell, e.g. https://rivendell.<tailnet>.ts.net
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+| Script              | What it does                                                    |
+| ------------------- | --------------------------------------------------------------- |
+| `npm run dev`       | Vite dev server                                                 |
+| `npm run check`     | svelte-check (types)                                            |
+| `npm run lint`      | Prettier + ESLint                                               |
+| `npm run test:unit` | Vitest: `server` project (node) and `client` project (browser)  |
+| `npm run test:e2e`  | Playwright against a mock PocketBase (Chromium + mobile WebKit) |
+| `npm run build`     | Production build into `build/`                                  |
+| `npm start`         | Run the production build (`node build`)                         |
 
-To create a production version of your app:
+The collection registry in `src/lib/collections.ts` drives every table, card, search, sort
+and create form. It's checked against `tests/fixtures/rivendell-schema.json`, a snapshot of
+Rivendell's live schema. Regenerate the snapshot if Rivendell's schema changes.
+
+### Tests
+
+- **Unit/component** (`npm run test:unit -- --run`): pure logic next to the source as
+  `*.test.ts`, and components as `*.svelte.test.ts` in a real Chromium.
+- **E2E** (`npm run test:e2e`): builds the app and runs it against `tests/e2e/mock-pb`, an
+  in-memory PocketBase stand-in with seeded data. No real APIs are called. Install browsers
+  once with `npx playwright install chromium webkit`.
+- **Barcode scanning** e2e uses Chromium's fake camera playing
+  `tests/e2e/fixtures/ean13.y4m`. To regenerate it you need ffmpeg:
+  `node tests/e2e/fixtures/make-barcode-video.ts`.
+- **Real Rivendell smoke test** (read-only: signs in and opens every collection):
+
+  ```sh
+  E2E_REAL_PB=1 BASE_URL=http://localhost:4173 REAL_PB_EMAIL=… REAL_PB_PASSWORD=… \
+    npx playwright test smoke-real --project chromium
+  ```
+
+## Deploy on the tailnet
+
+Bruinen runs as two containers: the app plus its own Tailscale sidecar (hostname `bruinen`).
+The app joins Rivendell's Docker network (`rivendell_internal`) and reaches PocketBase at
+`http://rivendell-app:8090`. No host ports are published.
+
+1. Create `.env` from `.env.example`. Set `ORIGIN` to `https://bruinen.<your-tailnet>.ts.net`
+   and `TS_AUTHKEY` to a fresh auth key from the Tailscale admin console.
+2. Create `serve.json` from `serve.json.example`, with your tailnet name filled in. It's
+   gitignored.
+3. Create the Tailscale state folder: `mkdir -p <PATH>/bruinen/tailscale`.
+4. Make sure Rivendell is up (its network must exist), then run `docker compose up -d --build`.
+
+If a `bruinen` node existed on the tailnet before, delete it first. Otherwise Tailscale names
+the new node `bruinen-1` and `serve.json` no longer matches.
+
+**PocketBase superuser IP allowlist.** If Rivendell has _Settings → Superuser IPs_ set,
+superuser requests from any other address are rejected, and Bruinen's logins will fail. Add
+the `rivendell_internal` subnet, which you can look up with:
 
 ```sh
-npm run build
+docker network inspect rivendell_internal --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
 ```
 
-You can preview the production build with `npm run preview`.
+**Covers.** Card images load straight from the Backblaze B2 URLs Rivendell stores, so the
+bucket must allow public reads. If covers show placeholders everywhere, check that first.

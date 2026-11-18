@@ -1,0 +1,16 @@
+{
+	"TCP": {
+		"443": {
+			"HTTPS": true
+		}
+	},
+	"Web": {
+		"bruinen.<your-tailnet>.ts.net:443": {
+			"Handlers": {
+				"/": {
+					"Proxy": "http://bruinen-app:3000"
+				}
+			}
+		}
+	}
+}
