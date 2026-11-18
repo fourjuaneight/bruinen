@@ -1,17 +1,25 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
 	import type { FieldDef } from '../collections.ts';
+	import BarcodeScanner from './BarcodeScanner.svelte';
 
 	interface Props {
 		field: FieldDef;
 		options?: readonly string[];
 		value?: string | string[];
 		error?: string;
-		/** Extra control rendered next to the input (the barcode scan button). */
-		action?: Snippet;
 	}
 
-	let { field, options = [], value, error, action }: Props = $props();
+	let { field, options = [], value, error }: Props = $props();
+
+	let scanDialog: HTMLDialogElement | undefined = $state();
+	let scanButton: HTMLButtonElement | undefined = $state();
+	let scanning = $state(false);
+	let scanned: string | undefined = $state();
+
+	function openScanner() {
+		scanning = true;
+		scanDialog?.showModal();
+	}
 
 	const id = $derived(`field-${field.name}`);
 	const errorId = $derived(`${id}-error`);
@@ -72,14 +80,45 @@
 				name={field.name}
 				type={inputType}
 				inputmode={field.type === 'number' || field.scan ? 'numeric' : undefined}
-				value={text}
+				value={scanned ?? text}
 				placeholder={field.type === 'json' ? 'Go, Postgres' : undefined}
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={error ? errorId : undefined}
 			/>
 		{/if}
-		{@render action?.()}
+		{#if field.scan}
+			<button
+				type="button"
+				bind:this={scanButton}
+				aria-label="Scan {field.label}"
+				onclick={openScanner}
+			>
+				Scan
+			</button>
+		{/if}
 	</div>
+	{#if field.scan}
+		<dialog
+			bind:this={scanDialog}
+			aria-label="Scan {field.label}"
+			class="scan-dialog"
+			onclose={() => {
+				scanning = false;
+				scanButton?.focus();
+			}}
+		>
+			{#if scanning}
+				<BarcodeScanner
+					target={field.scan}
+					ondetect={(code) => {
+						scanned = code;
+						scanDialog?.close();
+					}}
+					onclose={() => scanDialog?.close()}
+				/>
+			{/if}
+		</dialog>
+	{/if}
 	{#if field.type === 'tags'}
 		<p id="{id}-hint" class="hint">Up to 5. Hold Ctrl or ⌘ to pick several on a computer.</p>
 	{/if}
@@ -107,6 +146,14 @@
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--muted);
+	}
+	.scan-dialog {
+		width: min(32rem, 100vw - 2rem);
+		padding: 1rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+		color: var(--text);
 	}
 	.field-error {
 		margin: 0;

@@ -10,7 +10,21 @@ export default defineConfig({
 	workers: 1,
 	use: { baseURL: APP, trace: 'retain-on-failure' },
 	projects: [
-		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+		{
+			name: 'chromium',
+			use: {
+				...devices['Desktop Chrome'],
+				permissions: ['camera'],
+				// Chromium's fake camera plays a still of an EAN-13 barcode (see tests/e2e/fixtures).
+				launchOptions: {
+					args: [
+						'--use-fake-ui-for-media-stream',
+						'--use-fake-device-for-media-stream',
+						'--use-file-for-fake-video-capture=tests/e2e/fixtures/ean13.y4m'
+					]
+				}
+			}
+		},
 		{ name: 'mobile-webkit', use: { ...devices['iPhone 15'] } }
 	],
 	webServer: [

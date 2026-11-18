@@ -17,7 +17,17 @@ describe('CreateForm', () => {
 	it('renders one labelled control per create field', async () => {
 		render(CreateForm, { def: movies, meta, form: null, submitting: false });
 		for (const field of movies.create) {
-			await expect.element(page.getByLabelText(field.label, { exact: false })).toBeInTheDocument();
+			const role =
+				field.type === 'number'
+					? 'spinbutton'
+					: field.type === 'meta' || field.type === 'select'
+						? 'combobox'
+						: field.type === 'tags'
+							? 'listbox'
+							: 'textbox';
+			await expect
+				.element(page.getByRole(role, { name: field.label, exact: true }))
+				.toBeInTheDocument();
 		}
 	});
 
