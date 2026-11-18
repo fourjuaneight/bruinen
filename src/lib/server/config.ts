@@ -1,6 +1,6 @@
-const DEFAULT_POCKETBASE_URL = 'http://127.0.0.1:8090';
+import { POCKETBASE_URL } from '$app/env/private';
 
-/** Base URL of Rivendell's PocketBase, read at call time so tests and deploys can override it. */
+/** Base URL of Rivendell's PocketBase; declared, defaulted and normalized in src/env.ts. */
 export function pocketbaseUrl(): string {
-	return (process.env.POCKETBASE_URL || DEFAULT_POCKETBASE_URL).replace(/\/+$/, '');
+	return POCKETBASE_URL;
 }
