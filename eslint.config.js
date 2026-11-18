@@ -34,8 +34,10 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// Bruinen is served from the site root with no base path, and most links carry
+			// query strings, so wrapping every href in resolve() adds noise without safety.
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );
