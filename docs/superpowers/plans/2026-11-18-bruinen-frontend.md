@@ -456,10 +456,10 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 - [ ] **Step 1:** Invoke `anthropic-skills:homelab-compose` and follow its sidecar conventions where they don't conflict with this plan.
 - [ ] **Step 2:** `Dockerfile`: `node:24-alpine` builder (`ARG ORIGIN`, `npm ci`, `npm run build`, `npm prune --omit=dev`) → runtime (`USER node`, copy `build/`, `node_modules`, `package.json`; `ENV PORT=3000`; `HEALTHCHECK` wget `/login`; `CMD ["node","build"]`).
 - [ ] **Step 3:** `docker-compose.yml`:
-  - `tailscale` service: hostname `bruinen`, `TS_AUTHKEY=${TS_AUTHKEY}`, `TS_SERVE_CONFIG=/config/serve.json`, state volume bound to `<PATH>/bruinen/tailscale` (same `driver_opts` pattern as Rivendell), healthcheck on `127.0.0.1:41236/healthz`.
+  - `tailscale` service: hostname `bruinen`, `TS_AUTHKEY=${TS_AUTHKEY}`, `TS_SERVE_CONFIG=/config/serve.json`, state volume bound to a host folder (same `driver_opts` pattern as Rivendell), healthcheck on `127.0.0.1:41236/healthz`.
   - `app` service: build arg `ORIGIN=${ORIGIN}`, env `POCKETBASE_URL=http://rivendell-app:8090`, networks `internal` (alias `bruinen-app`) and external `rivendell_internal`; `depends_on` tailscale healthy.
   - `serve.json.example` proxies `/` → `http://bruinen-app:3000`.
-- [ ] **Step 4:** README: setup (`.env` from example, `serve.json` from example), `mkdir -p <PATH>/bruinen/tailscale`, the **SuperuserIPs note** (add the `rivendell_internal` subnet, found with `docker network inspect rivendell_internal`, if that setting is used), scripts, the test matrix, and the scan e2e's ffmpeg requirement only for regenerating the fixture.
+- [ ] **Step 4:** README: setup (`.env` from example, `serve.json` from example), creating the Tailscale state folder, the **SuperuserIPs note** (add the `rivendell_internal` subnet, found with `docker network inspect rivendell_internal`, if that setting is used), scripts, the test matrix, and the scan e2e's ffmpeg requirement only for regenerating the fixture.
 - [ ] **Step 5:** Verify: `docker compose config` exits 0 and `docker build --build-arg ORIGIN=https://bruinen.example.ts.net .` succeeds. Commit `feat: Add container and tailnet deployment.`
 
 ---

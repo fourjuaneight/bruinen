@@ -68,7 +68,8 @@ The app joins Rivendell's Docker network (`rivendell_internal`) and reaches Pock
    and `TS_AUTHKEY` to a fresh auth key from the Tailscale admin console.
 2. Create `serve.json` from `serve.json.example`, with your tailnet name filled in. It's
    gitignored.
-3. Create the Tailscale state folder: `mkdir -p <PATH>/Docker/bruinen/tailscale`.
+3. Set `TAILSCALE_STATE_DIR` in `.env` to a host folder for the Tailscale node's state, and
+   create it with `mkdir -p`.
 4. Make sure Rivendell is up (its network must exist), then run `docker compose up -d --build`.
 
 If a `bruinen` node existed on the tailnet before, delete it first. Otherwise Tailscale names

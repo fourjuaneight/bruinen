@@ -58,12 +58,13 @@ services:
       tailscale:
         condition: service_healthy
 
-# Tailscale state lives on an external drive like Rivendell's. If the folder is missing (drive not
-# mounted), the volume fails to mount and the stack won't start on an empty state.
+# Tailscale state is bind-mounted from TAILSCALE_STATE_DIR. If the folder is missing (e.g. an
+# external drive isn't mounted), the volume fails to mount and the stack won't start on empty state.
 volumes:
   tailscale-state:
     name: bruinen_tailscale-state
-    driver_opts: { type: none, o: bind, device: <PATH>/bruinen/tailscale }
+    driver_opts:
+      { type: none, o: bind, device: '${TAILSCALE_STATE_DIR:?set TAILSCALE_STATE_DIR in .env}' }
   tailscale-sock:
     name: bruinen_tailscale-sock
 

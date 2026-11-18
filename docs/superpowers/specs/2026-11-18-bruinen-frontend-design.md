@@ -135,7 +135,7 @@ Rules taken from Rivendell:
 ## Deployment
 
 - `Dockerfile`: multi-stage build (`node:24-alpine`, `npm ci && npm run build`, then a runtime stage with `build/` and production deps). Runs as a non-root user.
-- `docker-compose.yml`: `tailscale` sidecar (hostname `bruinen`, `TS_SERVE_CONFIG`, auth key `TS_AUTHKEY`, state on `<PATH>/bruinen/tailscale`, matching Rivendell's volume pattern) + `app`. The `app` service joins the external network `rivendell_internal`. Env: `POCKETBASE_URL=http://rivendell-app:8090`, `ORIGIN=https://bruinen.<tailnet>.ts.net` (needed for adapter-node CSRF on form actions).
+- `docker-compose.yml`: `tailscale` sidecar (hostname `bruinen`, `TS_SERVE_CONFIG`, auth key `TS_AUTHKEY`, state on a host bind mount, matching Rivendell's volume pattern) + `app`. The `app` service joins the external network `rivendell_internal`. Env: `POCKETBASE_URL=http://rivendell-app:8090`, `ORIGIN=https://bruinen.<tailnet>.ts.net` (needed for adapter-node CSRF on form actions).
 - Use the `anthropic-skills:homelab-compose` skill when writing compose and `serve.json` so they match the established sidecar conventions.
 - `.env.example` documents the variables. `.env` and `serve.json` are gitignored.
 
