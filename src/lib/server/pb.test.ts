@@ -38,3 +38,19 @@ describe('createPb', () => {
 		expect(createPb().baseURL).toBe('http://rivendell-app:8090');
 	});
 });
+
+describe('longFetch', () => {
+	it('performs a real request through the long-timeout dispatcher', async () => {
+		const { createServer } = await import('node:http');
+		const { longFetch } = await import('./pb.ts');
+		const server = createServer((_req, res) => res.end('ok'));
+		await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+		const { port } = server.address() as { port: number };
+		try {
+			const res = await longFetch(`http://127.0.0.1:${port}/`);
+			expect(await res.text()).toBe('ok');
+		} finally {
+			server.close();
+		}
+	});
+});

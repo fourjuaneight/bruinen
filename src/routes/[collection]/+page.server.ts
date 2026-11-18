@@ -1,8 +1,10 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { getCollection } from '#lib/collections.ts';
+import { createRecord } from '#lib/server/create.ts';
 import { loadMetaOptions } from '#lib/server/meta.ts';
+import { buildPayload, formValues } from '#lib/server/payload.ts';
 import { buildListOptions, parseListQuery, PER_PAGE } from '#lib/server/query.ts';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const def = getCollection(params.collection);
@@ -26,4 +28,25 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		totalItems: list.totalItems,
 		meta
 	};
+};
+
+export const actions: Actions = {
+	create: async ({ params, request, locals }) => {
+		const def = getCollection(params.collection);
+		if (!def) error(404, 'Not found');
+
+		const form = await request.formData();
+		const values = formValues(def, form);
+		const { data, errors } = buildPayload(def, form);
+		if (Object.keys(errors).length) {
+			return fail(400, { message: 'Please fix the highlighted fields.', fields: errors, values });
+		}
+
+		const result = await createRecord(locals.pb, def, data);
+		if (result.kind === 'invalid') {
+			return fail(400, { message: result.message, fields: result.fields, values });
+		}
+		if (result.kind === 'pending') return fail(504, { pending: true });
+		return { result };
+	}
 };

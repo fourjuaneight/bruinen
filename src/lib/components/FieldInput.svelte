@@ -1,0 +1,119 @@
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+	import type { FieldDef } from '../collections.ts';
+
+	interface Props {
+		field: FieldDef;
+		options?: readonly string[];
+		value?: string | string[];
+		error?: string;
+		/** Extra control rendered next to the input (the barcode scan button). */
+		action?: Snippet;
+	}
+
+	let { field, options = [], value, error, action }: Props = $props();
+
+	const id = $derived(`field-${field.name}`);
+	const errorId = $derived(`${id}-error`);
+	const selected = $derived(Array.isArray(value) ? value : value ? [value] : []);
+	const text = $derived(Array.isArray(value) ? value.join(', ') : (value ?? ''));
+	const inputType = $derived(
+		field.type === 'number'
+			? 'number'
+			: field.type === 'url'
+				? 'url'
+				: field.type === 'date'
+					? 'date'
+					: 'text'
+	);
+</script>
+
+<div class="field">
+	<label for={id}>
+		{field.label}{#if field.required}<span aria-hidden="true" class="required"> *</span>{/if}
+	</label>
+	<div class="control">
+		{#if field.type === 'textarea'}
+			<textarea
+				{id}
+				name={field.name}
+				rows="3"
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error ? errorId : undefined}>{text}</textarea
+			>
+		{:else if field.type === 'meta' || field.type === 'select'}
+			<select
+				{id}
+				name={field.name}
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error ? errorId : undefined}
+			>
+				<option value="">{field.required ? 'Choose…' : 'None'}</option>
+				{#each field.options ?? options as option (option)}
+					<option value={option} selected={selected.includes(option)}>{option}</option>
+				{/each}
+			</select>
+		{:else if field.type === 'tags'}
+			<select
+				{id}
+				name={field.name}
+				multiple
+				size={Math.min(6, Math.max(3, options.length))}
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error ? `${errorId} ${id}-hint` : `${id}-hint`}
+			>
+				{#each options as option (option)}
+					<option value={option} selected={selected.includes(option)}>{option}</option>
+				{/each}
+			</select>
+		{:else}
+			<input
+				{id}
+				name={field.name}
+				type={inputType}
+				inputmode={field.type === 'number' || field.scan ? 'numeric' : undefined}
+				value={text}
+				placeholder={field.type === 'json' ? 'Go, Postgres' : undefined}
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error ? errorId : undefined}
+			/>
+		{/if}
+		{@render action?.()}
+	</div>
+	{#if field.type === 'tags'}
+		<p id="{id}-hint" class="hint">Up to 5. Hold Ctrl or ⌘ to pick several on a computer.</p>
+	{/if}
+	{#if error}
+		<p id={errorId} class="field-error">{error}</p>
+	{/if}
+</div>
+
+<style>
+	.field {
+		display: grid;
+		gap: 0.25rem;
+	}
+	label {
+		font-weight: 600;
+	}
+	.required {
+		color: var(--danger);
+	}
+	.control {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.hint {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--muted);
+	}
+	.field-error {
+		margin: 0;
+		color: var(--danger);
+		font-size: 0.875rem;
+	}
+	[aria-invalid='true'] {
+		border-color: var(--danger);
+	}
+</style>

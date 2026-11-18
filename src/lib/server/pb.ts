@@ -1,5 +1,5 @@
 import PocketBase, { ClientResponseError } from 'pocketbase';
-import { Agent } from 'undici';
+import { Agent, fetch as undiciFetch } from 'undici';
 import { pocketbaseUrl } from './config.ts';
 
 export const AUTH_COOKIE = 'pb_auth';
@@ -15,13 +15,15 @@ export function createPb(): PocketBase {
 // Node's fetch gives up on response headers after 300s; archiving a video can take longer.
 const slowAgent = new Agent({ headersTimeout: CREATE_TIMEOUT_MS, bodyTimeout: CREATE_TIMEOUT_MS });
 
-export function longFetch(url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-	return fetch(url, {
-		...init,
+// The dispatcher must come from the same undici as the fetch that uses it: Node's built-in fetch
+// bundles its own undici and rejects an Agent from the npm package ("invalid onRequestStart").
+export async function longFetch(url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+	const response = await undiciFetch(url as string | URL, {
+		...(init as Parameters<typeof undiciFetch>[1]),
 		signal: AbortSignal.timeout(CREATE_TIMEOUT_MS),
-		// @ts-expect-error undici's dispatcher option is not in the DOM RequestInit type
 		dispatcher: slowAgent
 	});
+	return response as unknown as Response;
 }
 
 export interface HttpErrorShape {
