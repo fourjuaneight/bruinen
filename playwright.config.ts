@@ -38,7 +38,7 @@ export default defineConfig({
 						reuseExistingServer: !process.env.CI
 					},
 					{
-						command: 'npm run build && node build',
+						command: 'pnpm run build && node build',
 						url: `${APP}/`,
 						env: { ORIGIN: APP, PORT: '4173', POCKETBASE_URL: MOCK_PB },
 						reuseExistingServer: !process.env.CI,

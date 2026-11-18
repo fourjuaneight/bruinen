@@ -13,8 +13,6 @@ A mobile-first web app for browsing, searching and adding records to
 
 Bruinen only reads and creates. It never edits or deletes records.
 
-Design: [docs/superpowers/specs/2026-11-18-bruinen-frontend-design.md](docs/superpowers/specs/2026-11-18-bruinen-frontend-design.md)
-
 ## Stack
 
 SvelteKit 3 (Svelte 5, `adapter-node`) on Node 24, the `pocketbase` JS SDK on the server,
@@ -24,20 +22,20 @@ self-hosted zxing WASM build for iOS Safari).
 ## Develop
 
 ```sh
-npm ci
+pnpm install   # Node and pnpm versions come from .nvmrc and package.json "packageManager"
 cp .env.example .env   # point POCKETBASE_URL at Rivendell, e.g. https://rivendell.<tailnet>.ts.net
-npm run dev
+pnpm dev
 ```
 
-| Script              | What it does                                                    |
-| ------------------- | --------------------------------------------------------------- |
-| `npm run dev`       | Vite dev server                                                 |
-| `npm run check`     | svelte-check (types)                                            |
-| `npm run lint`      | Prettier + ESLint                                               |
-| `npm run test:unit` | Vitest: `server` project (node) and `client` project (browser)  |
-| `npm run test:e2e`  | Playwright against a mock PocketBase (Chromium + mobile WebKit) |
-| `npm run build`     | Production build into `build/`                                  |
-| `npm start`         | Run the production build (`node build`)                         |
+| Script           | What it does                                                    |
+| ---------------- | --------------------------------------------------------------- |
+| `pnpm dev`       | Vite dev server                                                 |
+| `pnpm check`     | svelte-check (types)                                            |
+| `pnpm lint`      | Prettier + ESLint                                               |
+| `pnpm test:unit` | Vitest: `server` project (node) and `client` project (browser)  |
+| `pnpm test:e2e`  | Playwright against a mock PocketBase (Chromium + mobile WebKit) |
+| `pnpm build`     | Production build into `build/`                                  |
+| `pnpm start`     | Run the production build (`node build`)                         |
 
 The collection registry in `src/lib/collections.ts` drives every table, card, search, sort
 and create form. It's checked against `tests/fixtures/rivendell-schema.json`, a snapshot of
@@ -45,11 +43,11 @@ Rivendell's live schema. Regenerate the snapshot if Rivendell's schema changes.
 
 ### Tests
 
-- **Unit/component** (`npm run test:unit -- --run`): pure logic next to the source as
+- **Unit/component** (`pnpm test:unit --run`): pure logic next to the source as
   `*.test.ts`, and components as `*.svelte.test.ts` in a real Chromium.
-- **E2E** (`npm run test:e2e`): builds the app and runs it against `tests/e2e/mock-pb`, an
+- **E2E** (`pnpm test:e2e`): builds the app and runs it against `tests/e2e/mock-pb`, an
   in-memory PocketBase stand-in with seeded data. No real APIs are called. Install browsers
-  once with `npx playwright install chromium webkit`.
+  once with `pnpm exec playwright install chromium webkit`.
 - **Barcode scanning** e2e uses Chromium's fake camera playing
   `tests/e2e/fixtures/ean13.y4m`. To regenerate it you need ffmpeg:
   `node tests/e2e/fixtures/make-barcode-video.ts`.
@@ -57,7 +55,7 @@ Rivendell's live schema. Regenerate the snapshot if Rivendell's schema changes.
 
   ```sh
   E2E_REAL_PB=1 BASE_URL=http://localhost:4173 REAL_PB_EMAIL=… REAL_PB_PASSWORD=… \
-    npx playwright test smoke-real --project chromium
+    pnpm exec playwright test smoke-real --project chromium
   ```
 
 ## Deploy on the tailnet
@@ -70,7 +68,7 @@ The app joins Rivendell's Docker network (`rivendell_internal`) and reaches Pock
    and `TS_AUTHKEY` to a fresh auth key from the Tailscale admin console.
 2. Create `serve.json` from `serve.json.example`, with your tailnet name filled in. It's
    gitignored.
-3. Create the Tailscale state folder: `mkdir -p <PATH>/bruinen/tailscale`.
+3. Create the Tailscale state folder: `mkdir -p <PATH>/Docker/bruinen/tailscale`.
 4. Make sure Rivendell is up (its network must exist), then run `docker compose up -d --build`.
 
 If a `bruinen` node existed on the tailnet before, delete it first. Otherwise Tailscale names
