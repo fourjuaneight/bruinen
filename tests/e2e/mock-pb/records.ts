@@ -31,17 +31,22 @@ function valuesAt(state: MockState, record: MockRecord, path: string): string[] 
 	return [String(raw ?? '')];
 }
 
-const TERM = /([\w.@]+)\s*(~|=)\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g;
+const TERM = /([\w.@]+)\s*(\?~|~|=)\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g;
 
-/** Supports the filters Bruinen sends: `a ~ "x" || b ~ "x"` (contains) and `a = "x"` (equals). */
+/**
+ * Supports the filters Bruinen sends: `a ~ "x"` (contains), `a ?~ "x"` and `a = "x"` (equals).
+ * Like PocketBase, a plain operator on a multi-value relation requires EVERY value to match;
+ * the `?` variants require ANY value to match.
+ */
 function matches(state: MockState, record: MockRecord, filter: string): boolean {
 	const terms = [...filter.matchAll(TERM)];
 	if (!terms.length) return true;
 	return terms.some(([, path, op, single, double]) => {
 		const value = (single ?? double).replace(/\\(.)/g, '$1');
-		return valuesAt(state, record, path).some((v) =>
-			op === '~' ? v.toLowerCase().includes(value.toLowerCase()) : v === value
-		);
+		const values = valuesAt(state, record, path);
+		const test = (v: string) =>
+			op === '=' ? v === value : v.toLowerCase().includes(value.toLowerCase());
+		return op.startsWith('?') ? values.some(test) : values.length > 0 && values.every(test);
 	});
 }
 

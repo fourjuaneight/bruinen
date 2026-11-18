@@ -55,7 +55,7 @@
 		{/if}
 	</div>
 
-	<Toolbar def={data.def} query={data.query} />
+	<Toolbar def={data.def} query={data.query} {view} />
 
 	{#if pastEnd}
 		<p class="empty">

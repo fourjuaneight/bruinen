@@ -45,7 +45,9 @@ services:
       rivendell:
     environment:
       - POCKETBASE_URL=${POCKETBASE_URL:-http://rivendell-app:8090}
-      - ORIGIN=${ORIGIN}
+      # Required: without it adapter-node derives an http:// origin behind Tailscale Serve and
+      # every form POST (login included) fails its CSRF check.
+      - ORIGIN=${ORIGIN:?set ORIGIN in .env to https://bruinen.<your-tailnet>.ts.net}
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:3000/login']
       interval: 1m

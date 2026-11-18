@@ -9,7 +9,11 @@ describe('safeNext', () => {
 		['//evil.com', '/'],
 		['/\\evil', '/'],
 		['https://evil.com', '/'],
-		['movies', '/']
+		['movies', '/'],
+		// Browsers strip tabs and newlines from URLs, turning these into //evil.com.
+		['/\t/evil.com', '/'],
+		['/\n/evil.com', '/'],
+		['/movies?q=a#top', '/movies?q=a#top']
 	])('%s → %s', (input, expected) => {
 		expect(safeNext(input)).toBe(expected);
 	});

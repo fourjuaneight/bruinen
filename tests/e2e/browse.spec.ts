@@ -26,6 +26,14 @@ test('searches with quotes in the text', async ({ page }) => {
 	await expect(page.getByRole('link', { name: "O'Brien" })).toBeVisible();
 });
 
+test('search finds a record by any one of its tags', async ({ page }) => {
+	// The seeded video is tagged [go, programming]; "go" matches only one of the two.
+	await page.goto('/videos');
+	await page.getByLabel('Search Videos').fill('go');
+	await expect(page).toHaveURL(/q=go/);
+	await expect(page.locator('tbody tr')).toHaveCount(1);
+});
+
 test('sorts by clicking a column header', async ({ page, isMobile }) => {
 	test.skip(isMobile, 'headers are replaced by the sort select on phones');
 	await page.goto('/movies?view=table');

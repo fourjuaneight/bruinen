@@ -51,7 +51,7 @@ describe('buildListOptions', () => {
 	it('searches every search field with escaped text', () => {
 		const opts = buildListOptions(movies, parse("q=O'Brien"), filter);
 		expect(opts.filter).toBe(
-			pb.filter('title ~ {:q} || director ~ {:q} || genre.name ~ {:q}', { q: "O'Brien" })
+			pb.filter('title ~ {:q} || director ~ {:q} || genre.name ?~ {:q}', { q: "O'Brien" })
 		);
 	});
 
@@ -63,6 +63,19 @@ describe('buildListOptions', () => {
 		);
 		const literal = pb.filter('{:q}', { q: '|| id != ""' });
 		expect(opts.filter?.startsWith(`name ~ ${literal} ||`)).toBe(true);
+	});
+
+	it('matches multi-value relations when any value matches', () => {
+		const articles = getCollection('articles') as CollectionDef;
+		const opts = buildListOptions(
+			articles,
+			parseListQuery(new URL('http://app/x?q=go'), articles),
+			filter
+		);
+		// Plain ~ on a multi relation means every tag must match in PocketBase; ?~ means any.
+		expect(opts.filter).toBe(
+			pb.filter('title ~ {:q} || creator ~ {:q} || tags.name ?~ {:q}', { q: 'go' })
+		);
 	});
 
 	it('omits the filter when there is no search text', () => {

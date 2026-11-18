@@ -41,7 +41,11 @@ export function buildListOptions(
 	query: ListQuery,
 	filter: FilterFn
 ): { sort: string; filter?: string; expand?: string } {
-	const expr = def.searchFields.map((field) => `${field} ~ {:q}`).join(' || ');
+	// Relation paths (tags.name, genre.name) use ?~ so a multi-value relation matches when ANY
+	// value matches; PocketBase's plain ~ there requires every value to match.
+	const expr = def.searchFields
+		.map((field) => `${field} ${field.includes('.') ? '?~' : '~'} {:q}`)
+		.join(' || ');
 	return {
 		sort: query.sort,
 		filter: query.q ? filter(expr, { q: query.q }) : undefined,

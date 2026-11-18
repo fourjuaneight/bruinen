@@ -43,3 +43,11 @@ test('an unknown record is a 404', async ({ page }) => {
 	await page.goto('/movies/doesnotexist000');
 	await expect(page.getByRole('heading', { name: 'Not found' })).toBeVisible();
 });
+
+test('card view can be sorted on a desktop too', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'phones always show the sort select');
+	await page.goto('/movies?view=cards');
+	await page.getByLabel('Sort by').selectOption({ label: 'Year (oldest first)' });
+	await expect(page).toHaveURL(/sort=year/);
+	await expect(page.locator('.cards li').first()).toContainText("O'Brien");
+});
