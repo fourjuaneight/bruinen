@@ -81,18 +81,26 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 1: Scaffold, config, toolchain
 
 **Files:**
+
 - Create: everything `sv create` makes; `src/lib/server/config.ts`; `.env.example`; `.gitignore` additions (`.env`, `serve.json`, `test-results/`, `playwright-report/`)
 - Modify: `vite.config.ts`, `package.json`
 
 **Interfaces:**
+
 - Produces: `pocketbaseUrl(): string` (reads `process.env.POCKETBASE_URL` at call time, default `http://127.0.0.1:8090`, trailing slash stripped). Scripts `check`, `lint`, `test:unit`, `test:e2e`, `build`, `start` (`node build`).
 
 - [ ] **Step 1:** `npx sv@latest create . --template minimal --types ts --add vitest prettier eslint playwright sveltekit-adapter="adapter:node" --install npm`. If the flags changed, run interactively and pick the same. Pin every dependency in `package.json` to the exact installed version. Add `pocketbase@0.29.0`, `barcode-detector@3.2.4`, `undici` (latest 7.x/8.x matching Node 24), dev `@axe-core/playwright@4.14.0`, `bwip-js`.
 - [ ] **Step 2:** Read https://svelte.dev/docs/kit/adapter-node. Set `paths.origin` from `process.env.ORIGIN` in `vite.config.ts`. If the docs list a runtime env override for origin, use that instead and record which in `.env.example`.
 - [ ] **Step 3: Failing test** `src/lib/server/config.test.ts`:
   ```ts
-  it('defaults', () => { delete process.env.POCKETBASE_URL; expect(pocketbaseUrl()).toBe('http://127.0.0.1:8090') })
-  it('strips trailing slash', () => { process.env.POCKETBASE_URL = 'http://x:8090/'; expect(pocketbaseUrl()).toBe('http://x:8090') })
+  it('defaults', () => {
+  	delete process.env.POCKETBASE_URL;
+  	expect(pocketbaseUrl()).toBe('http://127.0.0.1:8090');
+  });
+  it('strips trailing slash', () => {
+  	process.env.POCKETBASE_URL = 'http://x:8090/';
+  	expect(pocketbaseUrl()).toBe('http://x:8090');
+  });
   ```
 - [ ] **Step 4:** `npm run test:unit -- --run src/lib/server/config.test.ts` → FAIL (module missing). Implement. Re-run → PASS.
 - [ ] **Step 5:** `npm run check && npm run lint && npm run build` → all exit 0.
@@ -101,27 +109,47 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 2: Collection registry + schema fixture
 
 **Files:**
+
 - Create: `src/lib/collections.ts`, `src/lib/collections.test.ts`, `tests/fixtures/rivendell-schema.json`
 
 **Interfaces:**
+
 - Produces:
+
   ```ts
   export type MetaType = 'definition' | 'genre' | 'platform' | 'status' | 'tags';
-  export type FieldType = 'text' | 'textarea' | 'number' | 'url' | 'date' | 'bool' | 'select' | 'meta' | 'tags' | 'json';
-  export interface FieldDef { name: string; label: string; type: FieldType; required?: boolean;
-    metaType?: MetaType; options?: readonly string[]; scan?: 'isbn' | 'barcode'; }
-  export interface CollectionDef { name: string; label: string;
-    titleField: string;            // display label, mirrors recordLabel() in rivendell/enrichers.go
-    keyField: string;              // field the user sends that identifies the record (lookup after generic 400)
-    image?: 'cover' | 'image'; imageAspect?: '2 / 3' | '1 / 1' | '63 / 88';
-    columns: readonly FieldDef[]; searchFields: readonly string[]; sortable: readonly string[];
-    defaultSort: string; expand: readonly string[]; create: readonly FieldDef[]; slowCreate?: boolean; }
-  export const COLLECTIONS: readonly CollectionDef[];   // 15 + meta, order = nav order
+  export type FieldType =
+  	'text' | 'textarea' | 'number' | 'url' | 'date' | 'bool' | 'select' | 'meta' | 'tags' | 'json';
+  export interface FieldDef {
+  	name: string;
+  	label: string;
+  	type: FieldType;
+  	required?: boolean;
+  	metaType?: MetaType;
+  	options?: readonly string[];
+  	scan?: 'isbn' | 'barcode';
+  }
+  export interface CollectionDef {
+  	name: string;
+  	label: string;
+  	titleField: string; // display label, mirrors recordLabel() in rivendell/enrichers.go
+  	keyField: string; // field the user sends that identifies the record (lookup after generic 400)
+  	image?: 'cover' | 'image';
+  	imageAspect?: '2 / 3' | '1 / 1' | '63 / 88';
+  	columns: readonly FieldDef[];
+  	searchFields: readonly string[];
+  	sortable: readonly string[];
+  	defaultSort: string;
+  	expand: readonly string[];
+  	create: readonly FieldDef[];
+  	slowCreate?: boolean;
+  }
+  export const COLLECTIONS: readonly CollectionDef[]; // 15 + meta, order = nav order
   export function getCollection(name: string): CollectionDef | undefined;
   ```
 
 - [ ] **Step 1:** Generate the fixture from the live DB, read-only and immutable, field names and types only:
-  `sqlite3 "file:<rivendell pb_data>/data.db?mode=ro&immutable=1" "select json_group_object(name, (select json_group_array(json_object('name',json_extract(f.value,'$.name'),'type',json_extract(f.value,'$.type'),'required',json_extract(f.value,'$.required'))) from json_each(fields) f)) from _collections where system=0 and type='base'"` → `tests/fixtures/rivendell-schema.json` (pretty-print it). Only the `_collections` table is read.
+      `sqlite3 "file:<rivendell pb_data>/data.db?mode=ro&immutable=1" "select json_group_object(name, (select json_group_array(json_object('name',json_extract(f.value,'$.name'),'type',json_extract(f.value,'$.type'),'required',json_extract(f.value,'$.required'))) from json_each(fields) f)) from _collections where system=0 and type='base'"` → `tests/fixtures/rivendell-schema.json` (pretty-print it). Only the `_collections` table is read.
 - [ ] **Step 2: Failing tests** `collections.test.ts`. Load the fixture and assert, for every `def` in `COLLECTIONS`:
   - `Object.keys(fixture)` sorted equals `COLLECTIONS.map(c=>c.name)` sorted (16 names).
   - every `columns`/`create`/`searchFields` base name (part before `.`) exists in `fixture[def.name]`.
@@ -143,21 +171,28 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 3: PocketBase client, auth guard, login/logout, mock PB, Playwright
 
 **Files:**
+
 - Create: `src/lib/server/pb.ts`, `src/lib/server/auth.ts`, `src/hooks.server.ts`, `src/app.d.ts`, `src/routes/login/*`, `src/routes/logout/+page.server.ts`, `src/routes/+error.svelte`, `tests/e2e/mock-pb/server.ts`, `tests/e2e/mock-pb/seed.ts`, `tests/e2e/auth.spec.ts`, `playwright.config.ts`; tests `pb.test.ts`, `auth.test.ts`
 
 **Interfaces:**
+
 - Consumes: `pocketbaseUrl()` (Task 1).
 - Produces:
   ```ts
   // pb.ts
   export const AUTH_COOKIE = 'pb_auth';
   export const CREATE_TIMEOUT_MS = 600_000;
-  export function createPb(): PocketBase;                       // base url + autoCancellation(false)
+  export function createPb(): PocketBase; // base url + autoCancellation(false)
   export function longFetch(url: RequestInfo | URL, init?: RequestInit): Promise<Response>; // undici Agent headersTimeout/bodyTimeout = CREATE_TIMEOUT_MS + AbortSignal.timeout(CREATE_TIMEOUT_MS)
   export function toHttpError(err: unknown): { status: number; message: string };
   // auth.ts
-  export function safeNext(next: string | null): string;         // '/' unless starts with '/' and not '//' or '/\'
-  export function cookieOptions(url: URL): { httpOnly: true; sameSite: 'Lax'; path: '/'; secure: boolean };
+  export function safeNext(next: string | null): string; // '/' unless starts with '/' and not '//' or '/\'
+  export function cookieOptions(url: URL): {
+  	httpOnly: true;
+  	sameSite: 'Lax';
+  	path: '/';
+  	secure: boolean;
+  };
   // app.d.ts: App.Locals { pb: PocketBase; user: { id: string; email: string } | null }
   ```
 - Mock PB (`tests/e2e/mock-pb/server.ts`): `startMockPb(port = 8099): Promise<{ close(): Promise<void>; reset(): void; setDelay(ms: number): void }>`, plus a CLI entry so Playwright `webServer` can run it. Control endpoints: `POST /__mock/reset`, `POST /__mock/delay {ms}`, `POST /__mock/down {down:boolean}` (when down, every API route destroys the socket).
@@ -185,17 +220,28 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 4: List query builder
 
 **Files:**
+
 - Create: `src/lib/server/query.ts`, `src/lib/server/query.test.ts`
 
 **Interfaces:**
+
 - Consumes: `CollectionDef` (Task 2).
 - Produces:
+
   ```ts
   export const PER_PAGE = 30;
-  export interface ListQuery { q: string; sort: string; page: number; view: 'table' | 'cards' | null }
+  export interface ListQuery {
+  	q: string;
+  	sort: string;
+  	page: number;
+  	view: 'table' | 'cards' | null;
+  }
   export function parseListQuery(url: URL, def: CollectionDef): ListQuery;
-  export function buildListOptions(def: CollectionDef, query: ListQuery,
-    filter: (expr: string, params: Record<string, unknown>) => string): { sort: string; filter?: string; expand?: string };
+  export function buildListOptions(
+  	def: CollectionDef,
+  	query: ListQuery,
+  	filter: (expr: string, params: Record<string, unknown>) => string
+  ): { sort: string; filter?: string; expand?: string };
   ```
 
 - [ ] **Step 1: Failing tests** (use `new PocketBase('http://x').filter` as the `filter` argument):
@@ -211,10 +257,12 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 5: Browse: layout, home, table, search/sort/pagination
 
 **Files:**
+
 - Create: `src/app.css`, `src/routes/+layout.svelte`, `src/routes/+layout.server.ts`, `src/routes/+page.svelte`, `src/routes/+page.server.ts`, `src/routes/[collection]/+page.server.ts`, `src/routes/[collection]/+page.svelte`, `src/lib/components/{DataTable,Toolbar,Pagination}.svelte`, `DataTable.svelte.test.ts`, `tests/e2e/browse.spec.ts`
 - Modify: `tests/e2e/mock-pb/server.ts`, `seed.ts`
 
 **Interfaces:**
+
 - Consumes: `COLLECTIONS`, `getCollection`, `parseListQuery`, `buildListOptions`, `PER_PAGE`, `locals.pb`.
 - Produces: `[collection]` load returns `{ def: CollectionDef; query: ListQuery; items: RecordModel[]; page: number; totalPages: number; totalItems: number; meta: Record<MetaType, string[]> }`. `meta` holds only the types the def's create form uses, loaded with one `getFullList` of `meta` sorted by `name`.
 - `DataTable` props: `{ def: CollectionDef; items: RecordModel[]; query: ListQuery }`. Each sortable header is an `<a>` to the toggled `sort`, with `aria-sort` on the `<th>`. The title cell links to `/{collection}/{id}`. Relation cells read `item.expand[field].name` (arrays joined `, `).
@@ -248,10 +296,12 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 6: Cards, view toggle, record detail
 
 **Files:**
+
 - Create: `src/lib/components/CardGrid.svelte`, `CardGrid.svelte.test.ts`, `src/routes/[collection]/[id]/+page.server.ts`, `+page.svelte`, `tests/e2e/cards.spec.ts`
 - Modify: `Toolbar.svelte` (view toggle), `[collection]/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: Task 5 load data. `def.image`, `def.imageAspect`, `def.titleField`.
 - Produces: `CardGrid` props `{ def: CollectionDef; items: RecordModel[] }`. Detail load returns `{ def, record }` (`getOne` with `expand`).
 - View resolution in the page: `query.view ?? (def.image && viewport < 640px ? 'cards' : 'table')`. The no-JS SSR default is `cards` for image collections and `table` otherwise. The toggle is a pair of links with `aria-current`.
@@ -273,24 +323,37 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 7: Create flow
 
 **Files:**
+
 - Create: `src/lib/server/payload.ts`, `payload.test.ts`, `src/lib/server/create.ts`, `create.test.ts`, `src/lib/components/{CreateDialog,FieldInput,Toast}.svelte`, `CreateDialog.svelte.test.ts`, `tests/e2e/create.spec.ts`
 - Modify: `[collection]/+page.server.ts` (`actions.create`), `[collection]/+page.svelte`, mock PB
 
 **Interfaces:**
+
 - Consumes: `FieldDef`, `CollectionDef.create/keyField/slowCreate`, `longFetch`, `CREATE_TIMEOUT_MS`.
 - Produces:
   ```ts
   // payload.ts
   export type FieldErrors = Record<string, string>;
-  export function buildPayload(def: CollectionDef, form: FormData): { data: Record<string, unknown>; errors: FieldErrors };
-  export function mapPbError(err: unknown): { message: string; fields: FieldErrors; generic: boolean };
+  export function buildPayload(
+  	def: CollectionDef,
+  	form: FormData
+  ): { data: Record<string, unknown>; errors: FieldErrors };
+  export function mapPbError(err: unknown): {
+  	message: string;
+  	fields: FieldErrors;
+  	generic: boolean;
+  };
   // create.ts
   export type CreateResult =
-    | { kind: 'created'; id: string; label: string }
-    | { kind: 'saved-unenriched'; id: string; label: string }
-    | { kind: 'pending' }
-    | { kind: 'invalid'; message: string; fields: FieldErrors };
-  export function createRecord(pb: PocketBase, def: CollectionDef, data: Record<string, unknown>): Promise<CreateResult>;
+  	| { kind: 'created'; id: string; label: string }
+  	| { kind: 'saved-unenriched'; id: string; label: string }
+  	| { kind: 'pending' }
+  	| { kind: 'invalid'; message: string; fields: FieldErrors };
+  export function createRecord(
+  	pb: PocketBase,
+  	def: CollectionDef,
+  	data: Record<string, unknown>
+  ): Promise<CreateResult>;
   ```
 - Action responses: `invalid` → `fail(400, { message, fields, values })`; `pending` → `fail(504, { pending: true })`; otherwise `{ result }`.
 
@@ -330,10 +393,12 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 8: Barcode scanning
 
 **Files:**
+
 - Create: `src/lib/barcode.ts`, `barcode.test.ts`, `src/lib/components/BarcodeScanner.svelte`, `BarcodeScanner.svelte.test.ts`, `tests/e2e/fixtures/make-barcode-video.ts`, `tests/e2e/fixtures/ean13.y4m`, `tests/e2e/scan.spec.ts`
 - Modify: `FieldInput.svelte` (scan button when `field.scan`), `playwright.config.ts` (chromium launch args)
 
 **Interfaces:**
+
 - Produces:
   ```ts
   // barcode.ts
@@ -373,6 +438,7 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 9: Accessibility sweep + real-Rivendell smoke
 
 **Files:**
+
 - Create: `tests/e2e/a11y.spec.ts`, `tests/e2e/smoke-real.spec.ts`
 
 - [ ] **Step 1: Failing e2e** `a11y.spec.ts`: axe (`withTags(['wcag2a','wcag2aa','wcag21aa'])`) on `/login`, `/`, `/movies`, `/movies?view=cards`, a detail page, the open create dialog, the empty state and the 404 page, in both projects and both color schemes (`page.emulateMedia({ colorScheme })`). Each must have zero violations. Also: Tab from page load reaches the skip link first, and every interactive element's bounding box is ≥ 44×44 at 390px.
@@ -383,6 +449,7 @@ Test placement: pure/server tests live next to the source as `*.test.ts` (Vitest
 ### Task 10: Container and tailnet deployment
 
 **Files:**
+
 - Create: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `serve.json.example`, `README.md`
 - Modify: `.env.example`
 

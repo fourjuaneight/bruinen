@@ -5,6 +5,7 @@
 Rivendell (`~/Repos/rivendell`) is a PocketBase v0.40.6 catalog of 15 collections + a `meta` lookup table, reachable only on the tailnet. Today the only UIs are the PocketBase admin (`/_/`) and Datasette (read-only). Bruinen (`~/Repos/bruinen`, empty repo) is a lightweight, mobile-first app to **browse every collection, search/sort it, and add records through Rivendell's existing create endpoints**, including barcode scanning from the phone camera.
 
 Decisions made with user:
+
 - **Local app on the tailnet only** (Cloudflare Pages dropped). Own Tailscale node, same pattern as `rivendell-datasette`.
 - **Auth: PocketBase superuser login** (email + password → server-side session cookie).
 - **Framework: SvelteKit** (SSR, `adapter-node`).
@@ -31,6 +32,7 @@ tailscale sidecar (hostname bruinen) ──► bruinen app (SvelteKit node, :300
 ## Rivendell / PocketBase version check (v0.38.0 → v0.40.6)
 
 Checked Rivendell commits `268a100..04d7275` and PocketBase `CHANGELOG.md` + `CHANGELOG_23_39.md`. **Nothing in the plan breaks.**
+
 - Rivendell: schema, preparers, enrichers and access rules are unchanged. Only the `go.mod`/Go version bump and a `log.Fatal` format fix.
 - PocketBase: no changes to the records list/create or `_superusers` auth-with-password REST APIs, filter syntax, or cookie/auth-token format.
 - Things to account for:
@@ -103,6 +105,7 @@ One typed entry per collection, derived from `rivendell/schema/collections.go` a
 ```
 
 Rules taken from Rivendell:
+
 - Meta fields: options come from `meta` filtered by `type`. The **name** is sent, not the ID, because the preparers resolve names on create. Tags are a multi-select capped at 5.
 - Hide fields Rivendell fills in: `cover`, `archive`, `dead`, `shared`, enriched `year` (still optional where API.md allows it).
 - Scan targets: books → `isbn`; cds, vinyls, games, movies, shows → `barcode`.
@@ -119,6 +122,7 @@ Rules taken from Rivendell:
 **Table and cards.** On mobile the table becomes stacked label/value rows (CSS only, no second markup). Cards show a fixed 2:3 frame (mtg 63:88), `loading="lazy"`, alt text from the title, and a placeholder when there's no cover. Collections with images default to cards on narrow screens.
 
 **Create dialog.** A native `<dialog>` with focus returned on close and Esc to close. It uses `use:enhance`, so it works without JS as a plain page fallback. PocketBase validation errors (`data.{field}.message`) map to field errors, and prepare errors (unknown tag) show as a form-level error.
+
 - Slow creates: the submit button turns into "Archiving… this can take a few minutes" and double submits are blocked. The server uses a fetch with a 10-minute timeout, since undici's default headersTimeout is 300s and video archiving can be longer. If it times out: "Still processing in Rivendell — refresh later". Rivendell keeps enriching after the client goes away.
 - On success: close the dialog, invalidate the list, and show a toast linking to the new record.
 
