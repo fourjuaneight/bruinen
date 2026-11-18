@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -9,11 +9,15 @@ const hasDocker = spawnSync('docker', ['compose', 'version']).status === 0;
 function composeConfig(env: string) {
 	const dir = mkdtempSync(join(tmpdir(), 'bruinen-compose-'));
 	const envFile = join(dir, '.env');
-	writeFileSync(envFile, env);
-	return spawnSync('docker', ['compose', '--env-file', envFile, 'config', '-q'], {
-		encoding: 'utf8',
-		env: { PATH: process.env.PATH, HOME: process.env.HOME }
-	});
+	try {
+		writeFileSync(envFile, env);
+		return spawnSync('docker', ['compose', '--env-file', envFile, 'config', '-q'], {
+			encoding: 'utf8',
+			env: { PATH: process.env.PATH, HOME: process.env.HOME }
+		});
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 }
 
 describe.skipIf(!hasDocker)('docker-compose.yml', () => {
