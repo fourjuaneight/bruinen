@@ -16,7 +16,8 @@ function table(rows: Record<string, unknown>[]): MockRecord[] {
 export function seed(): Db {
 	counter = 0;
 	const meta = table([
-		...['rock', 'jazz', 'drama', 'sci-fi', 'fiction', 'action'].map((name) => ({
+		// "drama" twice on purpose: Rivendell's real meta table has duplicate genre names.
+		...['rock', 'jazz', 'drama', 'sci-fi', 'fiction', 'action', 'drama'].map((name) => ({
 			name,
 			type: 'genre'
 		})),
