@@ -1,4 +1,4 @@
-import type { FieldDef } from './collections.ts';
+import type { CollectionDef, FieldDef } from './collections.ts';
 
 type Item = Record<string, unknown> & { expand?: Record<string, unknown> };
 
@@ -26,4 +26,40 @@ export function cellText(field: FieldDef, item: Item): string {
 		default:
 			return raw == null ? '' : String(raw);
 	}
+}
+
+const SYSTEM_FIELDS = new Set(['id', 'collectionId', 'collectionName', 'expand']);
+
+export interface DetailField {
+	name: string;
+	label: string;
+	text: string;
+	href?: string;
+}
+
+const humanize = (name: string) =>
+	name.charAt(0).toUpperCase() + name.slice(1).replaceAll('_', ' ');
+
+function fieldFor(def: CollectionDef, name: string, value: unknown): FieldDef {
+	const known = [...def.columns, ...def.create].find((f) => f.name === name);
+	if (known) return { ...known, label: known.label.replace(/ \(comma separated\)$/, '') };
+	if (def.expand.includes(name)) return { name, label: humanize(name), type: 'meta' };
+	if (typeof value === 'boolean') return { name, label: humanize(name), type: 'bool' };
+	if (typeof value === 'number') return { name, label: humanize(name), type: 'number' };
+	if (Array.isArray(value)) return { name, label: humanize(name), type: 'json' };
+	return { name, label: humanize(name), type: 'text' };
+}
+
+/** Every non-empty field of a record, in record order, ready for a definition list. */
+export function detailFields(def: CollectionDef, record: Item): DetailField[] {
+	const fields: DetailField[] = [];
+	for (const [name, value] of Object.entries(record)) {
+		if (SYSTEM_FIELDS.has(name)) continue;
+		const text = cellText(fieldFor(def, name, value), record);
+		if (!text) continue;
+		const field: DetailField = { name, label: fieldFor(def, name, value).label, text };
+		if (/^https?:\/\//.test(text)) field.href = text;
+		fields.push(field);
+	}
+	return fields;
 }

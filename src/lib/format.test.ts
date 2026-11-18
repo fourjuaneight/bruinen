@@ -33,3 +33,35 @@ describe('cellText', () => {
 		expect(cellText(f('text'), {})).toBe('');
 	});
 });
+
+describe('detailFields', () => {
+	it('labels known fields, resolves relations, links URLs and skips system fields', async () => {
+		const { detailFields } = await import('./format.ts');
+		const { getCollection } = await import('./collections.ts');
+		const def = getCollection('books')!;
+		const record = {
+			id: 'b1',
+			collectionId: 'pbc',
+			collectionName: 'books',
+			title: 'Dune',
+			author: 'Frank Herbert',
+			isbn: '',
+			genre: 'g1',
+			cover: 'https://b2.example/Books/Dune.jpeg',
+			favorite: true,
+			expand: { genre: { name: 'fiction' } }
+		};
+		expect(detailFields(def, record)).toEqual([
+			{ name: 'title', label: 'Title', text: 'Dune' },
+			{ name: 'author', label: 'Author', text: 'Frank Herbert' },
+			{ name: 'genre', label: 'Genre', text: 'fiction' },
+			{
+				name: 'cover',
+				label: 'Cover',
+				text: 'https://b2.example/Books/Dune.jpeg',
+				href: 'https://b2.example/Books/Dune.jpeg'
+			},
+			{ name: 'favorite', label: 'Favorite', text: 'Yes' }
+		]);
+	});
+});
