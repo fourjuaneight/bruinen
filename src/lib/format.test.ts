@@ -54,7 +54,7 @@ describe('detailFields', () => {
 		expect(detailFields(def, record)).toEqual([
 			{ name: 'title', label: 'Title', text: 'Dune' },
 			{ name: 'author', label: 'Author', text: 'Frank Herbert' },
-			{ name: 'genre', label: 'Genre', text: 'fiction' },
+			{ name: 'genre', label: 'Genre', text: 'Fiction' },
 			{
 				name: 'cover',
 				label: 'Cover',
@@ -63,5 +63,63 @@ describe('detailFields', () => {
 			},
 			{ name: 'favorite', label: 'Favorite', text: 'Yes' }
 		]);
+	});
+});
+
+describe('titleCase', () => {
+	it('capitalizes words and turns underscores into spaces', async () => {
+		const { titleCase } = await import('./format.ts');
+		expect(titleCase('not_started')).toBe('Not Started');
+		expect(titleCase('in_progress')).toBe('In Progress');
+		expect(titleCase('sci-fi')).toBe('Sci-Fi');
+		expect(titleCase('hip hop')).toBe('Hip Hop');
+		expect(titleCase('')).toBe('');
+	});
+});
+
+describe('detailFields display formatting', () => {
+	it('title-cases genre and status, leaving other relations as stored', async () => {
+		const { detailFields } = await import('./format.ts');
+		const { getCollection } = await import('./collections.ts');
+		const record = {
+			id: 'm1',
+			title: 'Arrival',
+			genre: 'g1',
+			definition: 'd1',
+			status: 's1',
+			expand: {
+				genre: { name: 'sci-fi' },
+				definition: { name: '4k' },
+				status: { name: 'not_started' }
+			}
+		};
+		const byName = Object.fromEntries(
+			detailFields(getCollection('movies')!, record).map((f) => [f.name, f.text])
+		);
+		expect(byName).toMatchObject({ genre: 'Sci-Fi', status: 'Not Started', definition: '4k' });
+	});
+});
+
+describe('cardExtra', () => {
+	it('shows the season for shows', async () => {
+		const { cardExtra } = await import('./format.ts');
+		const { getCollection } = await import('./collections.ts');
+		const shows = getCollection('shows')!;
+		expect(cardExtra(shows, { season: 2 })).toBe('Season 2');
+		expect(cardExtra(shows, { season: 0 })).toBe('');
+	});
+
+	it('shows the platform in uppercase for games', async () => {
+		const { cardExtra } = await import('./format.ts');
+		const { getCollection } = await import('./collections.ts');
+		const games = getCollection('games')!;
+		expect(cardExtra(games, { platform: 'p1', expand: { platform: { name: 'ps5' } } })).toBe('PS5');
+		expect(cardExtra(games, {})).toBe('');
+	});
+
+	it('adds nothing for other collections', async () => {
+		const { cardExtra } = await import('./format.ts');
+		const { getCollection } = await import('./collections.ts');
+		expect(cardExtra(getCollection('movies')!, { season: 3 })).toBe('');
 	});
 });

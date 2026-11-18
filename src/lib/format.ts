@@ -30,6 +30,16 @@ export function cellText(field: FieldDef, item: Item): string {
 
 const SYSTEM_FIELDS = new Set(['id', 'collectionId', 'collectionName', 'expand']);
 
+/** Relations shown title-cased on the record page ("not_started" → "Not Started"). */
+const TITLE_CASE_FIELDS = new Set(['genre', 'status']);
+
+/** "not_started" → "Not Started", "sci-fi" → "Sci-Fi". */
+export function titleCase(value: string): string {
+	return value
+		.replaceAll('_', ' ')
+		.replace(/(^|[\s-])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
+}
+
 export interface DetailField {
 	name: string;
 	label: string;
@@ -55,11 +65,22 @@ export function detailFields(def: CollectionDef, record: Item): DetailField[] {
 	const fields: DetailField[] = [];
 	for (const [name, value] of Object.entries(record)) {
 		if (SYSTEM_FIELDS.has(name)) continue;
-		const text = cellText(fieldFor(def, name, value), record);
-		if (!text) continue;
+		const raw = cellText(fieldFor(def, name, value), record);
+		if (!raw) continue;
+		const text = TITLE_CASE_FIELDS.has(name) ? titleCase(raw) : raw;
 		const field: DetailField = { name, label: fieldFor(def, name, value).label, text };
 		if (/^https?:\/\//.test(text)) field.href = text;
 		fields.push(field);
 	}
 	return fields;
+}
+
+/** The extra card line for collections that have one (see CollectionDef.cardExtra). */
+export function cardExtra(def: CollectionDef, item: Item): string {
+	const extra = def.cardExtra;
+	if (!extra) return '';
+	const field = [...def.columns, ...def.create].find((f) => f.name === extra.field);
+	const text = field ? cellText(field, item) : '';
+	if (!text) return '';
+	return extra.style === 'season' ? `Season ${text}` : text.toUpperCase();
 }

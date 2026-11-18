@@ -28,7 +28,8 @@ test('a card opens the record with meta names', async ({ page }) => {
 	await page.goto('/books?view=cards');
 	await page.getByRole('link', { name: /Nineteen Eighty-Four/ }).click();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nineteen Eighty-Four');
-	await expect(page.getByText('fiction')).toBeVisible();
+	await expect(page.getByText('Fiction', { exact: true })).toBeVisible();
+	await expect(page.getByText('Completed', { exact: true })).toBeVisible();
 	await page.getByRole('link', { name: 'Back to Books' }).click();
 	await expect(page).toHaveURL('/books?view=cards');
 });
@@ -36,6 +37,7 @@ test('a card opens the record with meta names', async ({ page }) => {
 test('cover collections default to cards', async ({ page }) => {
 	await page.goto('/games');
 	await expect(page.getByRole('img', { name: 'Hollow Knight' })).toBeVisible();
+	await expect(page.getByRole('link', { name: /Hollow Knight/ })).toContainText('PC');
 	await expect(page.getByRole('table')).toHaveCount(0);
 });
 
@@ -50,4 +52,9 @@ test('card view can be sorted on a desktop too', async ({ page, isMobile }) => {
 	await page.getByLabel('Sort by').selectOption({ label: 'Year (oldest first)' });
 	await expect(page).toHaveURL(/sort=year/);
 	await expect(page.locator('.cards li').first()).toContainText("O'Brien");
+});
+
+test('show cards include the season', async ({ page }) => {
+	await page.goto('/shows');
+	await expect(page.getByRole('link', { name: /Severance/ })).toContainText('Season 1');
 });

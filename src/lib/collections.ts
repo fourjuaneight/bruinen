@@ -35,6 +35,8 @@ export interface CollectionDef {
 	expand: readonly string[];
 	create: readonly FieldDef[];
 	slowCreate?: boolean;
+	/** One extra detail on cards: a show's season or a game's platform. */
+	cardExtra?: { field: string; style: 'season' | 'uppercase' };
 }
 
 const text = (name: string, label: string, extra: Partial<FieldDef> = {}): FieldDef => ({
@@ -158,6 +160,7 @@ function screen(name: 'movies' | 'shows', label: string): CollectionDef {
 		sortable: ['title', 'director', 'year', ...season.map((f) => f.name)],
 		defaultSort: ROWID,
 		expand: ['genre', 'definition', 'status'],
+		...(name === 'shows' ? { cardExtra: { field: 'season', style: 'season' as const } } : {}),
 		create: [
 			text('title', 'Title', { required: true }),
 			text('director', 'Director'),
@@ -195,6 +198,7 @@ export const COLLECTIONS: readonly CollectionDef[] = [
 		sortable: ['title', 'publisher', 'year'],
 		defaultSort: ROWID,
 		expand: ['genre', 'platform', 'status'],
+		cardExtra: { field: 'platform', style: 'uppercase' },
 		create: [
 			text('title', 'Title', { required: true }),
 			text('publisher', 'Publisher'),

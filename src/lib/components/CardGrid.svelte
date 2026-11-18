@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionDef } from '../collections.ts';
-	import { cellText } from '../format.ts';
+	import { cardExtra, cellText } from '../format.ts';
 	import Cover from './Cover.svelte';
 
 	interface Props {
@@ -30,6 +30,9 @@
 				{#if subtitleColumn && cellText(subtitleColumn, item)}
 					<span class="subtitle">{cellText(subtitleColumn, item)}</span>
 				{/if}
+				{#if cardExtra(def, item)}
+					<span class="extra">{cardExtra(def, item)}</span>
+				{/if}
 			</a>
 		</li>
 	{/each}
@@ -54,9 +57,14 @@
 		font-weight: 600;
 		line-height: 1.3;
 	}
-	.subtitle {
+	.subtitle,
+	.extra {
 		color: var(--muted);
 		font-size: 0.875rem;
+	}
+	.extra {
+		font-weight: 600;
+		letter-spacing: 0.02em;
 	}
 	a:hover .title {
 		text-decoration: underline;

@@ -31,7 +31,8 @@ describe('collection registry', () => {
 				...def.sortable,
 				...def.expand,
 				def.titleField,
-				def.keyField
+				def.keyField,
+				...(def.cardExtra ? [def.cardExtra.field] : [])
 			].map(base);
 			for (const field of used) expect(fieldNames, `${name}.${field}`).toContain(field);
 		});

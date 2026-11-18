@@ -9,7 +9,36 @@ const movies = getCollection('movies') as CollectionDef;
 const PNG =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
+const shows = getCollection('shows') as CollectionDef;
+const games = getCollection('games') as CollectionDef;
+
 describe('CardGrid', () => {
+	it('shows the season on show cards', async () => {
+		render(CardGrid, {
+			def: shows,
+			items: [{ id: 's1', title: 'Severance', season: 2, cover: PNG }]
+		});
+		const card = page.getByRole('link', { name: /Severance/ });
+		await expect.element(card.getByText('Season 2', { exact: true })).toBeInTheDocument();
+	});
+
+	it('shows the platform in uppercase on game cards', async () => {
+		render(CardGrid, {
+			def: games,
+			items: [
+				{
+					id: 'g1',
+					title: 'Hollow Knight',
+					platform: 'p1',
+					expand: { platform: { name: 'pc' } },
+					cover: PNG
+				}
+			]
+		});
+		const card = page.getByRole('link', { name: /Hollow Knight/ });
+		await expect.element(card.getByText('PC', { exact: true })).toBeInTheDocument();
+	});
+
 	it('renders lazy covers with the record title as alt text and the right shape', async () => {
 		render(CardGrid, { def: mtg, items: [{ id: 'c1', name: 'Black Lotus', image: PNG }] });
 		const img = page.getByRole('img', { name: 'Black Lotus' });
