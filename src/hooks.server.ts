@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { ClientResponseError } from 'pocketbase';
 import { cookieOptions } from '#lib/server/auth.ts';
 import { AUTH_COOKIE, createPb, toHttpError } from '#lib/server/pb.ts';
 
@@ -12,8 +13,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (pb.authStore.isValid && pb.authStore.isSuperuser) {
 		try {
 			await pb.collection('_superusers').authRefresh();
-		} catch {
-			pb.authStore.clear();
+		} catch (err) {
+			// Rivendell being down is not a reason to log out: keep the session and let the
+			// page's own request fail with a 503 instead of bouncing the user to the login form.
+			const unreachable = err instanceof ClientResponseError && err.status === 0;
+			if (!unreachable) pb.authStore.clear();
 		}
 	} else {
 		pb.authStore.clear();

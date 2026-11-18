@@ -3,6 +3,8 @@
  * Runs with plain `node` (type stripping), so only erasable TypeScript syntax is allowed here.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { recordRoutes } from './routes.ts';
+import './records.ts';
 import { seed, type Db } from './seed.ts';
 
 const SUPERUSERS_ID = 'pbc_3142635823';
@@ -64,17 +66,6 @@ function authed(state: MockState, req: IncomingMessage): boolean {
 	return state.tokens.has(header.replace(/^Bearer\s+/i, ''));
 }
 
-export type RouteHandler = (
-	state: MockState,
-	req: IncomingMessage,
-	res: ServerResponse,
-	url: URL,
-	body: Record<string, unknown>
-) => boolean | Promise<boolean>;
-
-/** Extra routes registered by records.ts; kept separate so this file stays about auth and control. */
-export const recordRoutes: RouteHandler[] = [];
-
 export async function handle(state: MockState, req: IncomingMessage, res: ServerResponse) {
 	const url = new URL(req.url ?? '/', 'http://mock');
 	const body = req.method === 'POST' || req.method === 'PATCH' ? await readJson(req) : {};
@@ -122,6 +113,9 @@ export async function handle(state: MockState, req: IncomingMessage, res: Server
 		return send(res, 200, { token, record: superuser });
 	}
 
+	if (url.pathname.startsWith('/covers/')) {
+		for (const route of recordRoutes) if (await route(state, req, res, url, body)) return;
+	}
 	if (url.pathname.startsWith('/api/collections/')) {
 		if (!authed(state, req) && req.method !== 'POST') {
 			return send(res, 403, apiError(403, 'Only superusers can perform this action.'));
@@ -148,7 +142,6 @@ export function startMockPb(port = 8099) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
 	const port = Number(process.env.MOCK_PB_PORT ?? 8099);
-	await import('./records.ts');
 	await startMockPb(port);
 	console.log(`mock PocketBase on http://127.0.0.1:${port}`);
 }

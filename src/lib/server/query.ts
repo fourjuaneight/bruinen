@@ -1,13 +1,9 @@
 import type { CollectionDef } from '../collections.ts';
+import type { ListQuery } from '../list.ts';
+
+export type { ListQuery };
 
 export const PER_PAGE = 30;
-
-export interface ListQuery {
-	q: string;
-	sort: string;
-	page: number;
-	view: 'table' | 'cards' | null;
-}
 
 type FilterFn = (expr: string, params: Record<string, unknown>) => string;
 
