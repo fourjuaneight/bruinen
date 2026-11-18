@@ -33,6 +33,13 @@ describe('loadMetaOptions', () => {
 		});
 	});
 
+	it('lists a name once even when Rivendell has duplicate meta rows', async () => {
+		// The live data has two genre rows named "art"; a keyed list would throw on the duplicate.
+		const { pb } = source([...rows, { name: 'drama', type: 'genre' }]);
+		const movies = getCollection('movies') as CollectionDef;
+		expect((await loadMetaOptions(pb, movies)).genre).toEqual(['drama']);
+	});
+
 	it('skips the request when the form has no meta fields', async () => {
 		const { pb, calls } = source(rows);
 		expect(await loadMetaOptions(pb, getCollection('github') as CollectionDef)).toEqual({});

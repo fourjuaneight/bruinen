@@ -1,5 +1,6 @@
 import { ClientResponseError } from 'pocketbase';
 import { describe, expect, it } from 'vitest';
+import { pocketbaseUrl } from './config.ts';
 import { createPb, toHttpError } from './pb.ts';
 
 const pbError = (status: number) =>
@@ -33,9 +34,8 @@ describe('toHttpError', () => {
 });
 
 describe('createPb', () => {
-	it('points at POCKETBASE_URL', () => {
-		process.env.POCKETBASE_URL = 'http://rivendell-app:8090/';
-		expect(createPb().baseURL).toBe('http://rivendell-app:8090');
+	it('points at the configured POCKETBASE_URL', () => {
+		expect(createPb().baseURL).toBe(pocketbaseUrl());
 	});
 });
 

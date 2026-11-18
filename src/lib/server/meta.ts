@@ -15,10 +15,14 @@ export async function loadMetaOptions(pb: MetaSource, def: CollectionDef): Promi
 	if (!types.size) return {};
 
 	const rows = await pb.collection('meta').getFullList({ sort: 'name', fields: 'name,type' });
+	// Rivendell's meta table can hold the same name twice for one type (e.g. two "art" genres).
+	// Creates send names, so one entry per name is all the form needs.
 	const options: MetaOptions = {};
 	for (const row of rows) {
 		const type = row.type as MetaType;
-		if (types.has(type)) (options[type] ??= []).push(row.name);
+		if (!types.has(type)) continue;
+		const names = (options[type] ??= []);
+		if (!names.includes(row.name)) names.push(row.name);
 	}
 	return options;
 }
