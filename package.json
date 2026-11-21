@@ -20,7 +20,7 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
-		"start": "node build",
+		"start": "BODY_SIZE_LIMIT=12M node build",
 		"docker:deploy": "POCKETBASE_URL=http://rivendell-app:8090 docker compose up -d --build"
 	},
 	"devDependencies": {
