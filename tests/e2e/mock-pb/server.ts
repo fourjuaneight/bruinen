@@ -40,10 +40,20 @@ export interface MockState {
 	b2: Map<string, Buffer>;
 	/** When set, B2 uploads fail with 503. */
 	b2Down: boolean;
+	/** Requests served, by "METHOD /path", so tests can tell which calls a page made. */
+	hits: Record<string, number>;
 }
 
 export function freshState(): MockState {
-	return { db: seed(), tokens: new Set(), delayMs: 0, down: false, b2: seedB2(), b2Down: false };
+	return {
+		db: seed(),
+		tokens: new Set(),
+		delayMs: 0,
+		down: false,
+		b2: seedB2(),
+		b2Down: false,
+		hits: {}
+	};
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -85,9 +95,18 @@ export async function handle(state: MockState, req: IncomingMessage, res: Server
 		state.delayMs = Number(body.ms) || 0;
 		return send(res, 200, { ok: true });
 	}
+	if (url.pathname === '/__mock/hits') return send(res, 200, state.hits);
+	if (url.pathname === '/__mock/revoke') {
+		state.tokens.clear();
+		return send(res, 200, { ok: true });
+	}
 	if (url.pathname === '/__mock/down') {
 		state.down = Boolean(body.down);
 		return send(res, 200, { ok: true });
+	}
+	if (!url.pathname.startsWith('/__mock/')) {
+		const key = `${req.method} ${url.pathname}`;
+		state.hits[key] = (state.hits[key] ?? 0) + 1;
 	}
 	if (url.pathname === '/api/health')
 		return send(res, 200, { code: 200, message: 'API is healthy.' });

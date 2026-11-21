@@ -1,7 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { ClientResponseError } from 'pocketbase';
-import { cookieOptions } from '#lib/server/auth.ts';
+import { cookieOptions, refreshSession } from '#lib/server/auth.ts';
 import { AUTH_COOKIE, createPb, toHttpError } from '#lib/server/pb.ts';
 
 const PUBLIC_PATHS = new Set(['/login']);
@@ -9,19 +8,8 @@ const PUBLIC_PATHS = new Set(['/login']);
 export const handle: Handle = async ({ event, resolve }) => {
 	const pb = createPb();
 	pb.authStore.loadFromCookie(event.request.headers.get('cookie') ?? '', AUTH_COOKIE);
-
-	if (pb.authStore.isValid && pb.authStore.isSuperuser) {
-		try {
-			await pb.collection('_superusers').authRefresh();
-		} catch (err) {
-			// Rivendell being down is not a reason to log out: keep the session and let the
-			// page's own request fail with a 503 instead of bouncing the user to the login form.
-			const unreachable = err instanceof ClientResponseError && err.status === 0;
-			if (!unreachable) pb.authStore.clear();
-		}
-	} else {
-		pb.authStore.clear();
-	}
+	const token = pb.authStore.token;
+	await refreshSession(pb);
 
 	event.locals.pb = pb;
 	const record = pb.authStore.record;
@@ -33,15 +21,21 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const response = await resolve(event);
-	response.headers.append(
-		'set-cookie',
-		pb.authStore.exportToCookie(cookieOptions(event.url), AUTH_COOKIE)
-	);
+	// Only a sign-in, refresh, sign-out or rejected session changes the cookie.
+	if (pb.authStore.token !== token) {
+		response.headers.append(
+			'set-cookie',
+			pb.authStore.exportToCookie(cookieOptions(event.url), AUTH_COOKIE)
+		);
+	}
 	return response;
 };
 
-export const handleError: HandleServerError = ({ kind, error }) => {
+export const handleError: HandleServerError = ({ kind, error, event }) => {
 	if (kind !== 'unknown') return;
 	console.error(error);
-	return toHttpError(error);
+	const shaped = toHttpError(error);
+	// Rivendell refused the token (revoked before it expired): drop it so the next page signs in.
+	if (shaped.status === 401) event.locals.pb?.authStore.clear();
+	return shaped;
 };

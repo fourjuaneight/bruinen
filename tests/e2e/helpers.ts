@@ -12,6 +12,13 @@ export async function mock(path: string, body: object = {}) {
 	if (!res.ok) throw new Error(`mock ${path} failed: ${res.status}`);
 }
 
+/** How many times the mock served `METHOD /path` since the last reset. */
+export async function hits(key: string): Promise<number> {
+	const res = await fetch(`${MOCK_PB}/__mock/hits`);
+	const counts = (await res.json()) as Record<string, number>;
+	return counts[key] ?? 0;
+}
+
 export async function login(page: Page, next = '/') {
 	await page.goto(`/login?next=${encodeURIComponent(next)}`);
 	await page.getByLabel('Email').fill(ADMIN.email);

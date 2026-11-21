@@ -7,5 +7,13 @@
 <main id="main" class="error-page">
 	<p class="status">{page.status}</p>
 	<h1>{page.error?.message}</h1>
-	<p><a href="/">Back to collections</a></p>
+	{#if page.status === 401}
+		<p>
+			<a href="/login?next={encodeURIComponent(page.url.pathname + page.url.search)}">
+				Sign in again
+			</a>
+		</p>
+	{:else}
+		<p><a href="/">Back to collections</a></p>
+	{/if}
 </main>
