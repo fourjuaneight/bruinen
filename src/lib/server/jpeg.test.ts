@@ -102,6 +102,38 @@ describe('stripMetadata', () => {
 		expect(stripMetadata(input)).toEqual(jpeg([seg(0xe0, JFIF), seg(0xdb, DQT)]));
 	});
 
+	it('drops anything appended after the image ends', () => {
+		// Phones append MPF gain maps, previews (with their own EXIF) or motion-photo videos.
+		const trailer = Uint8Array.of(
+			...jpeg([seg(0xe1, exif({ orientation: 6, gps: true }))]),
+			...new TextEncoder().encode('ftypmp42 \xa9xyz+40.0-074.0/')
+		);
+		const image = jpeg([seg(0xe0, JFIF), seg(0xdb, DQT)]);
+		expect(stripMetadata(Uint8Array.of(...image, ...trailer))).toEqual(image);
+	});
+
+	it('drops metadata between progressive scans and keeps the scans', () => {
+		const sos = Uint8Array.of(0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00);
+		const scan1 = Uint8Array.of(5, 0xff, 0x00, 6, 0xff, 0xd0, 7);
+		const scan2 = Uint8Array.of(8, 0xff, 0x00, 9);
+		const dht = seg(0xc4, Uint8Array.of(0x10, 1, 2));
+		const file = (between: Uint8Array[]) =>
+			Uint8Array.of(
+				0xff,
+				0xd8,
+				...seg(0xe0, JFIF),
+				...sos,
+				...scan1,
+				...between.flatMap((b) => [...b]),
+				...sos,
+				...scan2,
+				0xff,
+				0xd9
+			);
+		const input = file([seg(0xe1, exif({ gps: true })), seg(0xfe, 'note'), dht]);
+		expect(stripMetadata(input)).toEqual(file([dht]));
+	});
+
 	it('refuses truncated or SOS-less files', () => {
 		const truncated = Uint8Array.of(0xff, 0xd8, 0xff, 0xe0, 0x00, 0x40, 1, 2);
 		const noSos = Uint8Array.of(0xff, 0xd8, ...seg(0xe0, JFIF), 0xff, 0xd9);

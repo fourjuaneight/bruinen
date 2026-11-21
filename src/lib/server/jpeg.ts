@@ -17,6 +17,7 @@ export function isJpeg(bytes: Uint8Array): boolean {
 }
 
 const SOS = 0xda;
+const EOI = 0xd9;
 const COM = 0xfe;
 
 const startsWith = (payload: Uint8Array, prefix: string) =>
@@ -68,25 +69,31 @@ function minimalExif(orientation: number): Uint8Array {
 
 /**
  * Remove EXIF, XMP, IPTC, comments and other APPn metadata, keeping JFIF, the ICC profile, the
- * Adobe segment, every table and frame header, and the scan data unchanged. An EXIF Orientation
- * other than 1 is written back as a minimal EXIF. Throws InvalidJpegError for anything that
- * can't be walked to its start of scan.
+ * Adobe segment, every table and frame header, and the scan data unchanged. Segments between
+ * progressive scans get the same treatment, and anything after the image's EOI (MPF secondary
+ * images, motion-photo videos, other trailers) is dropped. An EXIF Orientation other than 1 is
+ * written back as a minimal EXIF. Throws InvalidJpegError for anything that can't be walked to
+ * its start of scan.
  */
 export function stripMetadata(bytes: Uint8Array): Uint8Array {
 	if (!isJpeg(bytes)) throw new InvalidJpegError();
 	const leading: Uint8Array[] = [];
 	const rest: Uint8Array[] = [];
 	let orientation: number | undefined;
+	let scanned = false;
 	let i = 2;
 
 	for (;;) {
+		// A file that ends inside its scan data has no EOI; keep what there is.
+		if (scanned && i >= bytes.length) break;
 		if (i >= bytes.length || bytes[i] !== 0xff) throw new InvalidJpegError();
 		while (i + 1 < bytes.length && bytes[i + 1] === 0xff) i++; // fill bytes
 		if (i + 1 >= bytes.length) throw new InvalidJpegError();
 		const marker = bytes[i + 1];
 
-		if (marker === SOS) {
-			rest.push(bytes.subarray(i));
+		if (marker === EOI) {
+			if (!scanned) throw new InvalidJpegError();
+			rest.push(bytes.subarray(i, i + 2));
 			break;
 		}
 		if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
@@ -100,7 +107,22 @@ export function stripMetadata(bytes: Uint8Array): Uint8Array {
 		if (len < 2 || end > bytes.length) throw new InvalidJpegError();
 		const payload = bytes.subarray(i + 4, end);
 
-		if (marker === 0xe1 && startsWith(payload, 'Exif\0\0')) {
+		if (marker === SOS) {
+			// The scan's entropy-coded data runs to the next marker: an FF not followed by a
+			// stuffed 00, a restart marker or another fill byte.
+			let j = end;
+			while (j < bytes.length) {
+				if (bytes[j] !== 0xff || j + 1 >= bytes.length) j++;
+				else if (bytes[j + 1] === 0x00 || bytes[j + 1] === 0xff) j++;
+				else if (bytes[j + 1] >= 0xd0 && bytes[j + 1] <= 0xd7) j += 2;
+				else break;
+			}
+			rest.push(bytes.subarray(i, j));
+			scanned = true;
+			i = j;
+			continue;
+		}
+		if (marker === 0xe1 && !scanned && startsWith(payload, 'Exif\0\0')) {
 			orientation = orientationOf(payload) ?? orientation;
 		}
 		if (keep(marker, payload)) {
