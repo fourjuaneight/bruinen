@@ -36,7 +36,7 @@
 		gap: 0.5rem;
 		padding: 1rem;
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border-radius: 10px;
 		background: var(--surface);
 		color: var(--text);
 		text-decoration: none;

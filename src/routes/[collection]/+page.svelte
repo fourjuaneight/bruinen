@@ -110,10 +110,10 @@
 		min-width: 5.5rem;
 	}
 	.view-toggle a:first-child {
-		border-radius: var(--radius) 0 0 var(--radius);
+		border-radius: 10px 0 0 10px;
 	}
 	.view-toggle a:last-child {
-		border-radius: 0 var(--radius) var(--radius) 0;
+		border-radius: 0 10px 10px 0;
 		margin-left: -1px;
 	}
 	.view-toggle a[aria-current='page'] {

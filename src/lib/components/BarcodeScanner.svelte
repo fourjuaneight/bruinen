@@ -139,7 +139,7 @@
 		aspect-ratio: 4 / 3;
 		object-fit: cover;
 		background: #000;
-		border-radius: var(--radius);
+		border-radius: 10px;
 	}
 	p {
 		margin: 0;

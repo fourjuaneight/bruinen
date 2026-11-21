@@ -32,7 +32,7 @@
 	.frame {
 		width: 100%;
 		overflow: hidden;
-		border-radius: var(--radius);
+		border-radius: 10px;
 		background: var(--border);
 	}
 	img {

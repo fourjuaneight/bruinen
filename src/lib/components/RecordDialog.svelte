@@ -123,7 +123,7 @@
 		max-height: calc(100dvh - 2rem);
 		padding: 1rem 1.25rem 1.25rem;
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border-radius: 10px;
 		background: var(--surface);
 		color: var(--text);
 	}

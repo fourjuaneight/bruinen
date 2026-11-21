@@ -117,7 +117,7 @@
 		}
 		.collections-nav a {
 			width: 100%;
-			border-radius: var(--radius);
+			border-radius: 10px;
 		}
 	}
 </style>
