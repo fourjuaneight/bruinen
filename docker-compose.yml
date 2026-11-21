@@ -48,6 +48,11 @@ services:
       # Required: without it adapter-node derives an http:// origin behind Tailscale Serve and
       # every form POST (login included) fails its CSRF check.
       - ORIGIN=${ORIGIN:?set ORIGIN in .env to https://bruinen.<your-tailnet>.ts.net}
+      # Bruinen's own B2 key for cover uploads. The cover control stays hidden until all four are set.
+      - B2_APP_KEY_ID=${B2_APP_KEY_ID:-}
+      - B2_APP_KEY=${B2_APP_KEY:-}
+      - B2_BUCKET_ID=${B2_BUCKET_ID:-}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME:-}
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:3000/login']
       interval: 1m

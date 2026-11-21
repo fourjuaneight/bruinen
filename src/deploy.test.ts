@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -27,9 +27,31 @@ describe.skipIf(!hasDocker)('docker-compose.yml', () => {
 		expect(result.stderr).toContain('ORIGIN');
 	});
 
+	it('passes the B2 credentials through to the app', () => {
+		const config = JSON.parse(
+			execFileSync(
+				'docker',
+				['compose', '--env-file', '.env.example', 'config', '--format', 'json'],
+				{
+					encoding: 'utf8'
+				}
+			)
+		);
+		const env = Object.keys(config.services.app.environment);
+		for (const name of ['B2_APP_KEY_ID', 'B2_APP_KEY', 'B2_BUCKET_ID', 'B2_BUCKET_NAME']) {
+			expect(env).toContain(name);
+		}
+	});
+
 	it('accepts a complete env file', () => {
 		expect(() =>
 			execFileSync('docker', ['compose', '--env-file', '.env.example', 'config', '-q'])
 		).not.toThrow();
+	});
+});
+
+describe('Dockerfile', () => {
+	it('raises the body size limit so 10 MB cover uploads reach the server', () => {
+		expect(readFileSync('Dockerfile', 'utf8')).toMatch(/^ENV .*\bBODY_SIZE_LIMIT=12M\b/m);
 	});
 });

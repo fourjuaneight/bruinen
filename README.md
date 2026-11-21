@@ -82,3 +82,9 @@ docker network inspect rivendell_internal --format '{{range .IPAM.Config}}{{.Sub
 ```
 
 **Covers.** Card images load straight from the Backblaze B2 URLs Rivendell stores, so the bucket must allow public reads. If covers show placeholders everywhere, check that first.
+
+**Replacing covers.** A record page can replace a wrong or missing cover with a JPEG (up to 10 MB). Bruinen strips the photo's metadata (EXIF, including GPS), uploads it to B2 and saves the link on the record. To turn it on, create a separate application key for Bruinen in the Backblaze console (Application Keys → Add a New Application Key): allow access to the covers bucket only, with only the `writeFiles` capability. Put its key ID and key, plus the bucket's ID and name, in `.env` as `B2_APP_KEY_ID`, `B2_APP_KEY`, `B2_BUCKET_ID` and `B2_BUCKET_NAME`. Without all four, the control is hidden.
+
+- A cover already in the bucket is replaced in place: same file name, same link. A record with no cover gets a name built the way Rivendell builds it. If another record uses the same file, the record gets its own file instead, so the other cover doesn't change.
+- Bruinen never deletes anything in B2. B2 keeps the replaced file as an older version; the bucket's lifecycle settings decide whether it is ever removed.
+- The device you upload from shows the new cover right away. Other devices may keep showing the old one until their cover cache drops it.

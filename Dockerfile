@@ -9,7 +9,7 @@ RUN pnpm run build && pnpm prune --prod
 
 FROM node:24-alpine
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000
+ENV NODE_ENV=production PORT=3000 BODY_SIZE_LIMIT=12M
 COPY --from=builder --chown=node:node /app/build ./build
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json ./package.json
