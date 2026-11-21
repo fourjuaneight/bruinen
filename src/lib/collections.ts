@@ -20,9 +20,15 @@ export interface FieldDef {
 	scan?: 'isbn' | 'barcode';
 }
 
+export type NavGroup = 'physical' | 'digital' | 'vocabulary';
+
 export interface CollectionDef {
 	name: string;
 	label: string;
+	/** One item, lower case unless it's an initialism: "Add book", "Add CD". */
+	singular: string;
+	/** Navigation group; the registry lists collections in group order. */
+	group: NavGroup;
 	/** Display label for a record; mirrors recordLabel() in rivendell/enrichers.go. */
 	titleField: string;
 	/** Field the user sends that identifies the record; used to find it after an opaque 400. */
@@ -86,7 +92,7 @@ const comments: FieldDef = { name: 'comments', label: 'Comments', type: 'textare
 const year = num('year', 'Year');
 const ROWID = '-@rowid';
 
-type Draft = Omit<CollectionDef, 'edit'>;
+type Draft = Omit<CollectionDef, 'edit' | 'singular' | 'group'>;
 
 function archivable(name: string, label: string, sendTitle: boolean): Draft {
 	return {
@@ -163,7 +169,7 @@ function screen(name: 'movies' | 'shows', label: string): Draft {
 			meta('status', 'Status'),
 			bool('favorite', 'Favorite')
 		],
-		searchFields: ['title', 'director', 'genre.name'],
+		searchFields: ['title', 'director', 'barcode', 'genre.name'],
 		sortable: ['title', 'director', 'year', ...season.map((f) => f.name)],
 		defaultSort: ROWID,
 		expand: ['genre', 'definition', 'status'],
@@ -201,7 +207,7 @@ const DRAFTS: readonly Draft[] = [
 			meta('status', 'Status'),
 			bool('favorite', 'Favorite')
 		],
-		searchFields: ['title', 'publisher', 'platform.name', 'genre.name'],
+		searchFields: ['title', 'publisher', 'barcode', 'platform.name', 'genre.name'],
 		sortable: ['title', 'publisher', 'year'],
 		defaultSort: ROWID,
 		expand: ['genre', 'platform', 'status'],
@@ -421,8 +427,34 @@ const ENRICHED = new Set(
 	])
 );
 
+const SINGULAR: Record<string, string> = {
+	movies: 'movie',
+	shows: 'show',
+	games: 'game',
+	books: 'book',
+	cds: 'CD',
+	vinyls: 'vinyl',
+	mtg: 'card',
+	articles: 'article',
+	podcasts: 'podcast',
+	videos: 'video',
+	feeds: 'feed',
+	read_later: 'link',
+	watch_later: 'video',
+	github: 'repo',
+	records: 'work record',
+	meta: 'entry'
+};
+
+const PHYSICAL = new Set(['movies', 'shows', 'games', 'books', 'cds', 'vinyls', 'mtg']);
+
+const groupOf = (name: string): NavGroup =>
+	PHYSICAL.has(name) ? 'physical' : name === 'meta' ? 'vocabulary' : 'digital';
+
 export const COLLECTIONS: readonly CollectionDef[] = DRAFTS.map((def) => ({
 	...def,
+	singular: SINGULAR[def.name],
+	group: groupOf(def.name),
 	edit: [...def.create, ...(FLAGS[def.name] ?? [])],
 	...(ENRICHED.has(def.name) ? { enriched: true } : {})
 }));

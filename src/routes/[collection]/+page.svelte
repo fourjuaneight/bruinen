@@ -30,7 +30,7 @@
 
 <svelte:head><title>{data.def.label} · Bruinen</title></svelte:head>
 
-<main id="main">
+<main id="content" tabindex="-1">
 	<div class="heading">
 		<h1>{data.def.label}</h1>
 		<span class="muted">{data.totalItems} {data.totalItems === 1 ? 'record' : 'records'}</span>

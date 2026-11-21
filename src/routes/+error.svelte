@@ -4,7 +4,7 @@
 
 <svelte:head><title>{page.status} · Bruinen</title></svelte:head>
 
-<main id="main" class="error-page">
+<main id="content" tabindex="-1" class="error-page">
 	<p class="status">{page.status}</p>
 	<h1>{page.error?.message}</h1>
 	{#if page.status === 401}

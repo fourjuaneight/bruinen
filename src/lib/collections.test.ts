@@ -15,6 +15,67 @@ describe('collection registry', () => {
 		expect(COLLECTIONS).toHaveLength(16);
 	});
 
+	it('names one item of each collection, for "Add {item}"', () => {
+		expect(Object.fromEntries(COLLECTIONS.map((c) => [c.name, c.singular]))).toEqual({
+			movies: 'movie',
+			shows: 'show',
+			games: 'game',
+			books: 'book',
+			cds: 'CD',
+			vinyls: 'vinyl',
+			mtg: 'card',
+			articles: 'article',
+			podcasts: 'podcast',
+			videos: 'video',
+			feeds: 'feed',
+			read_later: 'link',
+			watch_later: 'video',
+			github: 'repo',
+			records: 'work record',
+			meta: 'entry'
+		});
+	});
+
+	it('groups the navigation as physical, digital and vocabulary, in that order', () => {
+		const groups = (group: string) =>
+			COLLECTIONS.filter((c) => c.group === group).map((c) => c.label);
+		expect(groups('physical')).toEqual([
+			'Movies',
+			'Shows',
+			'Games',
+			'Books',
+			'CDs',
+			'Vinyls',
+			'MTG'
+		]);
+		expect(groups('digital')).toEqual([
+			'Articles',
+			'Podcasts',
+			'Videos',
+			'Feeds',
+			'Read later',
+			'Watch later',
+			'GitHub',
+			'Work records'
+		]);
+		expect(groups('vocabulary')).toEqual(['Meta']);
+		// The nav renders groups in registry order, so physical must come first.
+		expect(COLLECTIONS.map((c) => c.group)).toEqual(
+			[...COLLECTIONS.map((c) => c.group)].sort(
+				(a, b) =>
+					['physical', 'digital', 'vocabulary'].indexOf(a) -
+					['physical', 'digital', 'vocabulary'].indexOf(b)
+			)
+		);
+	});
+
+	it('searches the scannable field, so a scanned code finds its record', () => {
+		for (const def of COLLECTIONS) {
+			const scanned = def.create.find((f) => f.scan);
+			if (scanned) expect(def.searchFields, def.name).toContain(scanned.name);
+		}
+	});
+
 	it('getCollection finds by name and rejects unknown names', () => {
 		expect(getCollection('movies')?.label).toBe('Movies');
 		expect(getCollection('nope')).toBeUndefined();

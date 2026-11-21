@@ -25,7 +25,7 @@
 
 <svelte:head><title>{title} · {data.def.label} · Bruinen</title></svelte:head>
 
-<main id="main">
+<main id="content" tabindex="-1">
 	<p><a class="button" href={data.backHref}>Back to {data.def.label}</a></p>
 	<article class="record" class:has-image={data.def.image}>
 		{#if data.def.image}

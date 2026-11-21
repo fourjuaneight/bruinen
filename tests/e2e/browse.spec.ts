@@ -95,3 +95,25 @@ test('table rows stack with labels on phones', async ({ page, isMobile }) => {
 	const before = await firstCell.evaluate((el) => getComputedStyle(el, '::before').content);
 	expect(before).toContain('Director');
 });
+
+test('the sidebar groups the collections and marks the current one', async ({ page, isMobile }) => {
+	await page.goto('/movies');
+	const nav = page.getByRole('navigation', { name: 'Collections' });
+	const physical = nav.getByRole('list', { name: 'Physical' });
+	await expect(physical.getByRole('link')).toHaveCount(7);
+	await expect(nav.getByRole('list', { name: 'Digital' }).getByRole('link')).toHaveCount(8);
+	await expect(nav.getByRole('list', { name: 'Vocabulary' }).getByRole('link')).toHaveCount(1);
+	const current = physical.getByRole('link', { name: /Movies/ });
+	await expect(current).toHaveAttribute('aria-current', 'page');
+	// Counts show in the desktop sidebar; the phone pill row leaves them out.
+	if (isMobile) await expect(current).toHaveAccessibleName('Movies');
+	else await expect(current).toHaveAccessibleName(/Movies\s*35/);
+});
+
+test('the skip link moves focus into the main area', async ({ page, isMobile }) => {
+	test.skip(isMobile, 'no Tab key on phones');
+	await page.goto('/movies');
+	await page.keyboard.press('Tab');
+	await page.keyboard.press('Enter');
+	await expect(page.locator('main#content')).toBeFocused();
+});

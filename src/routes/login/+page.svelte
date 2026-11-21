@@ -8,7 +8,7 @@
 
 <svelte:head><title>Sign in · Bruinen</title></svelte:head>
 
-<main id="main" class="login">
+<main id="content" tabindex="-1" class="login">
 	<h1>Sign in</h1>
 	<p class="muted">Use your Rivendell superuser account.</p>
 

@@ -1,51 +1,82 @@
 <script lang="ts">
+	import { COLLECTIONS } from '#lib/collections.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const GROUPS = [
+		{ id: 'physical', label: 'Physical' },
+		{ id: 'digital', label: 'Digital' },
+		{ id: 'vocabulary', label: 'Vocabulary' }
+	] as const;
+	const count = new Intl.NumberFormat('en-US');
 </script>
 
 <svelte:head><title>Bruinen</title></svelte:head>
 
-<main id="main">
+<main id="content" tabindex="-1">
 	<h1>Collections</h1>
-	<ul class="grid">
-		{#each data.collections as c (c.name)}
-			<li>
-				<a href="/{c.name}">
-					<span class="label">{c.label}</span>
-					<span class="count">{c.count}</span>
-				</a>
-			</li>
-		{/each}
-	</ul>
+	{#each GROUPS as group (group.id)}
+		<section aria-labelledby="home-{group.id}">
+			<h2 id="home-{group.id}">{group.label}</h2>
+			<ul class="grid">
+				{#each COLLECTIONS.filter((def) => def.group === group.id) as def (def.name)}
+					<li>
+						<a href="/{def.name}">
+							<span class="label">{def.label}</span>
+							{#if data.counts[def.name] !== undefined}
+								<span class="count">{count.format(data.counts[def.name])}</span>
+							{/if}
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/each}
 </main>
 
 <style>
+	h1 {
+		margin-bottom: 8px;
+	}
+	h2 {
+		margin: 28px 0 12px;
+		color: var(--muted);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
 	.grid {
-		list-style: none;
-		padding: 0;
-		margin: 0;
 		display: grid;
-		gap: 0.75rem;
-		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 	a {
 		display: flex;
-		justify-content: space-between;
 		align-items: baseline;
-		gap: 0.5rem;
-		padding: 1rem;
+		justify-content: space-between;
+		gap: 8px;
+		min-height: var(--tap);
+		padding: 16px 18px;
 		border: 1px solid var(--border);
-		border-radius: 10px;
+		border-radius: 14px;
 		background: var(--surface);
 		color: var(--text);
 		text-decoration: none;
+	}
+	a:hover {
+		background: var(--hover);
 	}
 	.label {
 		font-weight: 600;
 	}
 	.count {
 		color: var(--muted);
+		font-size: 14px;
 		font-variant-numeric: tabular-nums;
 	}
 </style>
