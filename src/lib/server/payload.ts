@@ -1,8 +1,9 @@
 import { ClientResponseError } from 'pocketbase';
 import type { CollectionDef, FieldDef } from '../collections.ts';
+import { recordValues, type FormValues } from '../forms.ts';
 
+export type { FormValues };
 export type FieldErrors = Record<string, string>;
-export type FormValues = Record<string, string | string[]>;
 
 const MAX_TAGS = 5;
 const REJECTED = 'Rivendell rejected this record. Check the values and try again.';
@@ -63,10 +64,81 @@ export function buildPayload(
 	return { data, errors };
 }
 
+/** What an edit sends to clear a field the user emptied. */
+function emptyValue(field: FieldDef): unknown {
+	switch (field.type) {
+		case 'number':
+			return null;
+		case 'json':
+		case 'tags':
+			return [];
+		case 'bool':
+			return false;
+		default:
+			return '';
+	}
+}
+
+/** The submitted value in recordValues() form, so an untouched field compares equal. */
+function canonical(field: FieldDef, form: FormData): string | string[] | undefined {
+	switch (field.type) {
+		case 'tags':
+			return list(form, field.name);
+		case 'bool':
+			return form.has(field.name) ? 'on' : undefined;
+		case 'json':
+			return str(form, field.name)
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean)
+				.join(', ');
+		case 'number': {
+			const raw = str(form, field.name);
+			return raw && Number.isFinite(Number(raw)) ? String(Number(raw)) : raw;
+		}
+		default:
+			return str(form, field.name);
+	}
+}
+
+/**
+ * Turn the edit form into a PATCH payload holding only the fields that differ from the stored
+ * record, so untouched values (a date's time of day, which duplicate meta row a relation points
+ * at) are never rewritten. Emptied fields are sent as explicit empty values. Meta fields are
+ * still names here; resolveMetaIds turns them into IDs.
+ */
+export function buildUpdate(
+	def: CollectionDef,
+	form: FormData,
+	current: Record<string, unknown>
+): { data: Record<string, unknown>; errors: FieldErrors } {
+	const stored = recordValues(def, current);
+	const data: Record<string, unknown> = {};
+	const errors: FieldErrors = {};
+	for (const field of def.edit) {
+		const { value, error } = parseField(field, form);
+		if (error) {
+			errors[field.name] = error;
+			continue;
+		}
+		if (value === undefined && field.required) {
+			errors[field.name] = 'Required';
+			continue;
+		}
+		if (JSON.stringify(canonical(field, form)) === JSON.stringify(stored[field.name])) continue;
+		data[field.name] = value === undefined ? emptyValue(field) : value;
+	}
+	return { data, errors };
+}
+
 /** What the user typed, to refill the form after a failed submit (needed without JS). */
-export function formValues(def: CollectionDef, form: FormData): FormValues {
+export function formValues(
+	def: CollectionDef,
+	form: FormData,
+	fields: readonly FieldDef[] = def.create
+): FormValues {
 	const values: FormValues = {};
-	for (const field of def.create) {
+	for (const field of fields) {
 		if (field.type === 'tags') {
 			const tags = list(form, field.name);
 			if (tags.length) values[field.name] = tags;

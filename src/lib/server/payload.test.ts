@@ -1,7 +1,7 @@
 import { ClientResponseError } from 'pocketbase';
 import { describe, expect, it } from 'vitest';
 import { getCollection, type CollectionDef } from '../collections.ts';
-import { buildPayload, formValues, mapPbError } from './payload.ts';
+import { buildPayload, buildUpdate, formValues, mapPbError } from './payload.ts';
 
 const books = getCollection('books') as CollectionDef;
 const articles = getCollection('articles') as CollectionDef;
@@ -87,6 +87,109 @@ describe('buildPayload', () => {
 	});
 });
 
+describe('buildUpdate', () => {
+	const book = {
+		id: 'b1',
+		title: 'Dune',
+		author: 'Frank Herbert',
+		isbn: '',
+		genre: 'g1',
+		status: 's1',
+		year: 1965,
+		comments: '',
+		favorite: true,
+		expand: { genre: { id: 'g1', name: 'fiction' }, status: { id: 's1', name: 'reading' } }
+	};
+	const unchanged: [string, string][] = [
+		['title', 'Dune'],
+		['author', 'Frank Herbert'],
+		['isbn', ''],
+		['genre', 'fiction'],
+		['status', 'reading'],
+		['year', '1965'],
+		['comments', ''],
+		['favorite', 'on']
+	];
+	const edited = (name: string, value: string | null) =>
+		form([
+			...unchanged.filter(([k]) => k !== name),
+			...(value === null ? [] : [[name, value] as [string, string]])
+		]);
+
+	it('sends nothing when nothing changed', () => {
+		expect(buildUpdate(books, form(unchanged), book)).toEqual({ data: {}, errors: {} });
+	});
+
+	it('sends only the changed fields, with meta fields as names', () => {
+		const fd = edited('status', 'finished');
+		fd.set('title', ' Dune Messiah ');
+		expect(buildUpdate(books, fd, book)).toEqual({
+			data: { title: 'Dune Messiah', status: 'finished' },
+			errors: {}
+		});
+	});
+
+	it('clears a number with null and a relation with an empty string', () => {
+		const fd = edited('year', '');
+		fd.set('genre', '');
+		expect(buildUpdate(books, fd, book).data).toEqual({ year: null, genre: '' });
+	});
+
+	it('sends false for an unchecked flag and true for a newly checked one', () => {
+		expect(buildUpdate(books, edited('favorite', null), book).data).toEqual({ favorite: false });
+		expect(buildUpdate(books, form(unchanged), { ...book, favorite: false }).data).toEqual({
+			favorite: true
+		});
+	});
+
+	it('flags a cleared required field and sends nothing', () => {
+		expect(buildUpdate(books, edited('title', ''), book)).toEqual({
+			data: {},
+			errors: { title: 'Required' }
+		});
+	});
+
+	it('leaves an untouched date and JSON list alone, and clears an emptied one', () => {
+		const job = {
+			company: 'Acme',
+			position: '',
+			stack: ['Go', 'Postgres'],
+			start: '2024-01-05 08:30:00.000Z',
+			end: ''
+		};
+		const same = form([
+			['company', 'Acme'],
+			['position', ''],
+			['stack', 'Go,Postgres'],
+			['start', '2024-01-05'],
+			['end', '']
+		]);
+		expect(buildUpdate(records, same, job).data).toEqual({});
+		same.set('stack', '');
+		same.set('end', '2024-06-30');
+		expect(buildUpdate(records, same, job).data).toEqual({
+			stack: [],
+			end: '2024-06-30 00:00:00.000Z'
+		});
+	});
+
+	it('clears tags with an empty list only where they are optional', () => {
+		const article = {
+			title: 'T',
+			creator: 'C',
+			url: 'https://x.test',
+			tags: ['t1'],
+			expand: { tags: [{ id: 't1', name: 'go' }] }
+		};
+		const fd = form([
+			['title', 'T'],
+			['creator', 'C'],
+			['url', 'https://x.test']
+		]);
+		expect(buildUpdate(articles, fd, article).errors).toEqual({ tags: 'Required' });
+	});
+});
+
 describe('formValues', () => {
 	it('echoes what the user typed, keeping every selected tag', () => {
 		expect(
@@ -102,6 +205,11 @@ describe('formValues', () => {
 			title: 'T',
 			tags: ['go', 'tech']
 		});
+	});
+
+	it('echoes edit fields, including a checked flag, when given the edit list', () => {
+		const values = formValues(books, form([['title', 'T'], ['favorite', 'on']]), books.edit);
+		expect(values).toEqual({ title: 'T', favorite: 'on' });
 	});
 });
 
