@@ -10,6 +10,7 @@ import { self as sw } from '$app/service-worker';
 // Covers keep their URL across deploys, so this cache does too. A cover replaced in place is
 // cleared from it by the page that uploaded it (src/lib/cover-cache.ts).
 import { IMAGE_CACHE } from '../lib/cover-cache.ts';
+import { precache } from '../lib/precache.ts';
 
 const STATIC_PREFIX = 'bruinen-static-';
 /** Hashed build output plus `static/`, renamed every deploy so old caches can be dropped. */
@@ -21,20 +22,23 @@ const STATIC_CACHE = `${STATIC_PREFIX}${version}`;
 const MAX_IMAGES = 500;
 
 /** Manifest paths are relative to the base path, which is the worker's scope. */
-const ASSETS = [...immutable, ...assets].map(
-	({ path }) => new URL(path, sw.registration.scope).pathname
-);
+const pathOf = ({ path }: { path: string }) => new URL(path, sw.registration.scope).pathname;
+const HASHED = new Set(immutable.map(pathOf));
+const ASSETS = [...HASHED, ...assets.map(pathOf)];
 const ASSET_PATHS = new Set(ASSETS);
 
 sw.addEventListener('install', (event) => {
 	// Every asset must be cached before the worker installs, the same as a fresh page load.
-	event.waitUntil(
-		caches
-			.open(STATIC_CACHE)
-			.then((cache) => cache.addAll(ASSETS))
-			.then(() => sw.skipWaiting())
-	);
+	event.waitUntil(install().then(() => sw.skipWaiting()));
 });
+
+async function install() {
+	const names = (await caches.keys()).filter(
+		(name) => name.startsWith(STATIC_PREFIX) && name !== STATIC_CACHE
+	);
+	const previous = await Promise.all(names.map((name) => caches.open(name)));
+	await precache(await caches.open(STATIC_CACHE), ASSETS, HASHED, previous);
+}
 
 sw.addEventListener('activate', (event) => {
 	event.waitUntil(clearOldCaches().then(() => sw.clients.claim()));
