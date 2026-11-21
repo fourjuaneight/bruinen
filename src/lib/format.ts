@@ -91,3 +91,31 @@ export function cardExtra(def: CollectionDef, item: Item): string {
 	if (!text) return '';
 	return extra.style === 'season' ? `Season ${text}` : text.toUpperCase();
 }
+
+export type StatusTone = 'progress' | 'ok' | 'idle' | 'neutral';
+
+const DONE = new Set(['completed', 'finished', 'done']);
+
+/** The chip colour for a status from Meta. The chip always shows the text too. */
+export function statusTone(value: string): StatusTone {
+	const key = value
+		.trim()
+		.toLowerCase()
+		.replace(/[\s-]+/g, '_');
+	if (key === 'in_progress') return 'progress';
+	if (DONE.has(key)) return 'ok';
+	if (key === 'not_started') return 'idle';
+	return 'neutral';
+}
+
+const FLAG_LABELS = { favorite: 'Favorite', dead: 'Dead link', shared: 'Shared' } as const;
+
+export type FlagName = keyof typeof FLAG_LABELS;
+
+/** Badges for the flags a record has set, in a fixed order. They replace "Yes". */
+export function flagBadges(def: CollectionDef, item: Item): { name: FlagName; label: string }[] {
+	const flags = new Set(def.edit.filter((f) => f.type === 'bool').map((f) => f.name));
+	return (Object.keys(FLAG_LABELS) as FlagName[])
+		.filter((name) => flags.has(name) && item[name] === true)
+		.map((name) => ({ name, label: FLAG_LABELS[name] }));
+}

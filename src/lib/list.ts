@@ -34,3 +34,53 @@ export function sortState(current: string, field: string): 'ascending' | 'descen
 	if (current === `-${field}`) return 'descending';
 	return 'none';
 }
+
+export interface SortOption {
+	value: string;
+	label: string;
+}
+
+const DATE_LIKE = new Set(['year', 'start', 'end']);
+
+/** The words for each direction of a field: dates read as time, numbers as size, text as A–Z. */
+function directions(
+	def: CollectionDef,
+	field: string
+): { label: string; up: string; down: string } {
+	const column = def.columns.find((c) => c.name === field);
+	const numeric = column?.type === 'number' || column?.type === 'date';
+	const [up, down] = DATE_LIKE.has(field)
+		? ['oldest first', 'newest first']
+		: numeric
+			? ['low to high', 'high to low']
+			: ['A–Z', 'Z–A'];
+	return { label: column?.label ?? field, up, down };
+}
+
+/** The sort select's options: the default order, then each sortable field both ways. */
+export function sortOptions(def: CollectionDef): SortOption[] {
+	const options: SortOption[] = [
+		{
+			value: def.defaultSort,
+			label: def.defaultSort === '-@rowid' ? 'Recently added' : 'Default order'
+		}
+	];
+	for (const field of def.sortable) {
+		const { label, up, down } = directions(def, field);
+		for (const [value, dir] of [
+			[field, up],
+			[`-${field}`, down]
+		]) {
+			if (value !== def.defaultSort) options.push({ value, label: `${label} (${dir})` });
+		}
+	}
+	return options;
+}
+
+/** The table caption: "Articles, sorted by year, newest first". */
+export function sortCaption(def: CollectionDef, sort: string): string {
+	if (sort === '-@rowid') return `${def.label}, most recently added first`;
+	const field = sort.replace(/^-/, '');
+	const { label, up, down } = directions(def, field);
+	return `${def.label}, sorted by ${label.toLowerCase()}, ${sort.startsWith('-') ? down : up}`;
+}

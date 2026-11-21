@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { FieldDef } from './collections.ts';
-import { cellText } from './format.ts';
+import { getCollection, type CollectionDef, type FieldDef } from './collections.ts';
+import { cellText, flagBadges, statusTone } from './format.ts';
 
 const f = (type: FieldDef['type'], name = 'x'): FieldDef => ({ name, label: name, type });
 
@@ -121,5 +121,36 @@ describe('cardExtra', () => {
 		const { cardExtra } = await import('./format.ts');
 		const { getCollection } = await import('./collections.ts');
 		expect(cardExtra(getCollection('movies')!, { season: 3 })).toBe('');
+	});
+});
+
+describe('statusTone', () => {
+	it.each([
+		['in_progress', 'progress'],
+		['In Progress', 'progress'],
+		['completed', 'ok'],
+		['finished', 'ok'],
+		['done', 'ok'],
+		['not_started', 'idle'],
+		['wishlist', 'neutral']
+	])('%s → %s', (value, tone) => {
+		expect(statusTone(value)).toBe(tone);
+	});
+});
+
+describe('flagBadges', () => {
+	const articles = getCollection('articles') as CollectionDef;
+
+	it('lists the true flags in a fixed order, with their badge text', () => {
+		expect(flagBadges(articles, { shared: true, favorite: true, dead: true })).toEqual([
+			{ name: 'favorite', label: 'Favorite' },
+			{ name: 'dead', label: 'Dead link' },
+			{ name: 'shared', label: 'Shared' }
+		]);
+	});
+
+	it('shows nothing for false flags or collections without them', () => {
+		expect(flagBadges(articles, { favorite: false })).toEqual([]);
+		expect(flagBadges(getCollection('cds') as CollectionDef, { favorite: true })).toEqual([]);
 	});
 });
