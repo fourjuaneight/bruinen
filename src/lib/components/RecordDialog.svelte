@@ -20,14 +20,10 @@
 
 	const title = $derived(heading ?? (mode === 'edit' ? 'Edit' : `New ${def.label}`));
 	const titleId = $derived(`${mode}-title`);
-	// Each open starts the edit form from the record again, so a cancelled edit leaves no trace.
+	const dialogId = $derived(`${mode}-dialog`);
+	// Each close resets the edit form to the record, so a cancelled edit leaves no trace.
 	// The create form keeps a cancelled draft, as before.
-	let opens = $state(0);
-
-	function open() {
-		if (mode === 'edit') opens += 1;
-		dialog?.showModal();
-	}
+	let closes = $state(0);
 
 	let dialog: HTMLDialogElement | undefined = $state();
 	let opener: HTMLButtonElement | undefined = $state();
@@ -75,7 +71,8 @@
 	type="button"
 	class={mode === 'edit' ? 'edit-record' : 'primary new-record'}
 	bind:this={opener}
-	onclick={open}
+	commandfor={dialogId}
+	command="show-modal"
 >
 	{mode === 'edit' ? 'Edit' : `New ${def.label}`}
 </button>
@@ -83,9 +80,13 @@
 <!-- WebKit does not restore focus on close, so send it back to the opener explicitly. -->
 <dialog
 	bind:this={dialog}
+	id={dialogId}
 	aria-labelledby={titleId}
 	open={failed}
-	onclose={() => opener?.focus()}
+	onclose={() => {
+		if (mode === 'edit') closes += 1;
+		opener?.focus();
+	}}
 	onpointerdown={(event) => (pressedOnBackdrop = onBackdrop(event))}
 	onclick={(event) => {
 		if (pressedOnBackdrop && onBackdrop(event)) dialog?.close();
@@ -94,9 +95,9 @@
 >
 	<div class="dialog-header">
 		<h2 id={titleId}>{title}</h2>
-		<button type="button" aria-label="Close" onclick={() => dialog?.close()}>✕</button>
+		<button type="button" aria-label="Close" commandfor={dialogId} command="close">✕</button>
 	</div>
-	{#key opens}
+	{#key closes}
 		<form
 			method="POST"
 			action={mode === 'edit' ? '?/update' : '?/create'}

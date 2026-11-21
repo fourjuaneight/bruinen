@@ -111,3 +111,18 @@ test('Cancel closes the dialog', async ({ page }) => {
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(dialog).toBeHidden();
 });
+
+test.describe('without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('the New button opens the dialog, and errors come back in it', async ({ page }) => {
+		await page.goto('/books');
+		await page.getByRole('button', { name: 'New Books' }).click();
+		const dialog = page.getByRole('dialog', { name: 'New Books' });
+		await expect(dialog).toBeVisible();
+		await dialog.getByLabel('Title').fill('Only a title');
+		await dialog.getByRole('button', { name: 'Save' }).click();
+		await expect(dialog.getByText('Required')).toBeVisible();
+		await expect(dialog.getByLabel('Title')).toHaveValue('Only a title');
+	});
+});
