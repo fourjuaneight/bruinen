@@ -31,7 +31,7 @@
 
 	const DATE_LIKE = new Set(['year', 'start', 'end']);
 
-	function sortOptions(def: CollectionDef) {
+	const sortOptions = $derived.by(() => {
 		const options = [
 			{
 				value: def.defaultSort,
@@ -55,7 +55,7 @@
 			}
 		}
 		return options;
-	}
+	});
 </script>
 
 <form
@@ -81,7 +81,7 @@
 	<label class="sort" class:headers-sort={view === 'table'}>
 		<span>Sort by</span>
 		<select name="sort" value={query.sort} onchange={() => form?.requestSubmit()}>
-			{#each sortOptions(def) as option (option.value)}
+			{#each sortOptions as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>

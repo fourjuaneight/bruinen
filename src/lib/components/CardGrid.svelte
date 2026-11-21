@@ -14,24 +14,26 @@
 		def.columns.find((c) => c.name === def.titleField) ?? def.columns[0]
 	);
 	const subtitleColumn = $derived(def.columns.find((c) => c !== titleColumn && c.type === 'text'));
-	const title = (item: Record<string, unknown>) => cellText(titleColumn, item) || 'Untitled';
 </script>
 
 <ul class="cards">
 	{#each items as item (item.id)}
+		{@const title = cellText(titleColumn, item) || 'Untitled'}
+		{@const subtitle = subtitleColumn ? cellText(subtitleColumn, item) : ''}
+		{@const extra = cardExtra(def, item)}
 		<li>
 			<a href="/{def.name}/{item.id}">
 				<Cover
 					src={String(item[def.image ?? 'cover'] ?? '')}
-					alt={title(item)}
+					alt={title}
 					aspect={def.imageAspect ?? '2 / 3'}
 				/>
-				<span class="title">{title(item)}</span>
-				{#if subtitleColumn && cellText(subtitleColumn, item)}
-					<span class="subtitle">{cellText(subtitleColumn, item)}</span>
+				<span class="title">{title}</span>
+				{#if subtitle}
+					<span class="subtitle">{subtitle}</span>
 				{/if}
-				{#if cardExtra(def, item)}
-					<span class="extra">{cardExtra(def, item)}</span>
+				{#if extra}
+					<span class="extra">{extra}</span>
 				{/if}
 			</a>
 		</li>

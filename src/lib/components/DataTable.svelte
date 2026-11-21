@@ -11,6 +11,8 @@
 
 	let { def, items, query }: Props = $props();
 
+	const SORT_MARKS = { ascending: '▲', descending: '▼', none: '' } as const;
+
 	const linkColumn = $derived(
 		def.columns.find((c) => c.name === def.titleField)?.name ?? def.columns[0].name
 	);
@@ -27,16 +29,11 @@
 			<tr role="row">
 				{#each def.columns as column (column.name)}
 					{#if def.sortable.includes(column.name)}
-						<th scope="col" role="columnheader" aria-sort={sortState(query.sort, column.name)}>
+						{@const sort = sortState(query.sort, column.name)}
+						<th scope="col" role="columnheader" aria-sort={sort}>
 							<a href={listHref(def, query, { sort: nextSort(query.sort, column.name), page: 1 })}>
 								{column.label}
-								<span aria-hidden="true" class="sort-mark">
-									{sortState(query.sort, column.name) === 'ascending'
-										? '▲'
-										: sortState(query.sort, column.name) === 'descending'
-											? '▼'
-											: ''}
-								</span>
+								<span aria-hidden="true" class="sort-mark">{SORT_MARKS[sort]}</span>
 							</a>
 						</th>
 					{:else}
