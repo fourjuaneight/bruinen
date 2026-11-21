@@ -13,7 +13,9 @@ This is a repair tool for records that already exist. It is not part of creating
 
 - From a record's page, pick a JPEG and have it become that record's cover in one step.
 - Store it in the same B2 bucket and folder layout Rivendell uses, so the covers stay consistent.
-- Show the new cover immediately, including on devices whose service worker cached the old one.
+- Replace the cover file in place: a new upload keeps the existing file name, so the record's link
+  stays the same.
+- Show the new cover immediately on the device that uploaded it.
 
 ## Non-goals
 
@@ -28,8 +30,10 @@ This is a repair tool for records that already exist. It is not part of creating
 
 ## Anti-goals
 
-- Bruinen must never delete or overwrite a file in B2. Every upload gets a new file name. An old
-  cover file stays in the bucket even after it is replaced.
+- Bruinen must never delete a file in B2. Replacing a cover uploads a new version under the same
+  name; B2 keeps the old version as a hidden older version, and the bucket's lifecycle settings
+  (not Bruinen) decide whether it is ever removed.
+- Replacing one record's cover must never change another record's cover (see File name).
 - The B2 key must never reach the browser. All B2 calls happen on the Bruinen server.
 - Bruinen must not reuse Rivendell's B2 key. It gets its own, limited key (see Configuration).
 
@@ -59,8 +63,8 @@ This is a repair tool for records that already exist. It is not part of creating
     - shows: `FileNameFmt(title)-s%02d` when `season > 0`, otherwise `FileNameFmt(title)`
     - movies: `FileNameFmt(title)-{year}`. Rivendell uses TMDB's year and can produce `Title-.jpeg`
       when it is empty. Bruinen uses the record's `year` and leaves `-{year}` off when it is 0 or
-      missing. (My call: the unique part below already makes every name differ from Rivendell's,
-      so matching its empty-year quirk buys nothing.)
+      missing. (My call: this only applies to records without a cover in the bucket, since an
+      existing cover's path is reused as is; see File name.)
   - Extension: `.jpeg`.
   - `FileNameFmt` is in `~/Repos/rivendell/utils/fileNameFmt.go` (the `emojiRange` regex lives in
     the same package). Its tests are the `TestFileNameFmt` table in
@@ -69,8 +73,8 @@ This is a repair tool for records that already exist. It is not part of creating
   (`node_modules/@sveltejs/adapter-node/src/handler.js`). Phone photos are several MB. The Vite dev
   server does not enforce this limit, so it only bites in production.
 - **Service worker.** `src/service-worker/index.ts` caches covers cache-first by URL
-  (`bruinen-images`). A replacement at the same URL would keep showing the old image; a new URL
-  avoids that with no service worker change.
+  (`bruinen-images`) and never re-checks them; the browser's HTTP cache may hold them too. A
+  replacement at the same URL keeps showing the old image until something clears those copies.
 - **Env vars** are declared in `src/env.ts` with `defineEnvVars` and read from `$app/env/private`
   (see `src/lib/server/config.ts`).
 
@@ -137,22 +141,44 @@ everything after it are copied unchanged, so the picture is pixel-identical.
 
 ### File name
 
-`{Folder}/{name}-{unique}.jpeg`, for example `Books/Dune-k3f9a2.jpeg`.
+A new upload replaces the existing file under the same name (decided by the user). The path is
+chosen in this order:
 
-- `{name}` follows Rivendell's rules above, built with a TypeScript port of `FileNameFmt`.
-- `{unique}` is a short random part, so every upload has a new URL. This keeps B2 from ever
-  overwriting a file and keeps the service worker from showing a stale cover.
-- If `{name}` comes out empty (a title with no Latin letters or digits), the record ID is used
-  instead.
+1. **The record already has a cover in this bucket** (its URL starts with
+   `{downloadUrl}/file/{bucketName}/`): reuse that exact path, URL-decoded. Rivendell's names don't
+   always match what Bruinen would build (movies use TMDB's year, for example), so reusing the
+   path is the only way to be sure the existing file is the one replaced.
+2. **Otherwise** (no cover, or a cover hosted elsewhere): `{Folder}/{name}.jpeg`, with `{name}`
+   from Rivendell's rules above, built with a TypeScript port of `FileNameFmt`. For example
+   `Books/Dune.jpeg`. If `{name}` comes out empty (a title with no Latin letters or digits), the
+   record ID is used instead.
+
+**Shared files (my call).** Rivendell can give two records the same file, for example two editions
+of "Dune". Before uploading, the server checks whether any other record in the collection has a
+`cover` equal to the chosen path's public URL. If one does, the path becomes
+`{Folder}/{name}-{recordId}.jpeg` instead, so the other record's cover is left alone.
+
+When the resulting URL equals the record's current `cover`, the record is not PATCHed; only the B2
+file changes.
+
+### Stale covers (decided by the user)
+
+The link stays the same, so caches must be cleared. Bruinen has a single user, so only the
+uploading device is handled:
+
+- After a successful upload, the page deletes the cover's URL from the service worker's
+  `bruinen-images` cache, fetches it again bypassing the browser's HTTP cache, and shows the new
+  image without a full reload.
+- Other devices may keep showing the old cover until their cache evicts it. This is accepted.
 
 ### Flow (new `?/cover` form action on the record route)
 
 1. Read the multipart form; check that a file is present, is a JPEG by its bytes, and is within
    10 MB.
 2. Strip metadata (see Metadata).
-3. Load the record to get the fields the name needs.
+3. Load the record, pick the path (see File name), and check for other records sharing it.
 4. Upload the stripped file to B2 (authorize, get an upload URL, upload), as in Constraints.
-5. PATCH the record's `cover` with the public URL through the existing `updateRecord`
+5. If the URL changed, PATCH the record's `cover` with it through the existing `updateRecord`
    (`src/lib/server/update.ts`).
 6. Return a success result the page turns into the toast.
 
@@ -160,8 +186,8 @@ Failures:
 
 - **B2 fails** (network, auth, B2 error): "Couldn't upload the cover. Try again." Nothing changes
   on the record.
-- **B2 succeeds but the record update fails:** show the error. The uploaded file stays in B2
-  unused; Bruinen does not delete it.
+- **B2 succeeds but the record update fails:** show the error. The uploaded file stays in B2;
+  Bruinen does not delete it.
 - **Record gone (404) or Rivendell unreachable:** the existing error page path, like `update`.
 
 ### B2 client
@@ -195,15 +221,19 @@ bucket, with only the `writeFiles` capability.
 
 - **Unit:** the `FileNameFmt` port (every case from Rivendell's `TestFileNameFmt`, plus an
   all-stripped title), the name rules per collection (show with and without a season, movie with
-  and without a year, empty name), the JPEG and size checks, metadata stripping (EXIF with GPS
+  and without a year, empty name), path choice (reuse a bucket path, build one for no cover or a
+  foreign cover, fall back to `-{recordId}` when another record shares the file), the JPEG and size checks, metadata stripping (EXIF with GPS
   removed, XMP and comments removed, ICC and JFIF kept, scan data byte-identical, Orientation 6
   kept as a minimal EXIF, Orientation 1 or none leaves no APP1, a truncated file refused), and the
   B2 client against a fake `fetch` (headers, SHA-1, URL built, token cached, one re-authorize on
   `401`).
 - **E2E:** a mock B2 server next to the mock PocketBase (`tests/e2e/mock-pb/`) that answers the
   three calls and serves uploaded files. Cases:
-  - replace a book's cover; the new image shows and the toast says Cover updated
-  - add a cover to a record without one
+  - replace a book's cover; the same URL is kept, the new image shows without a reload (not the
+    cached old one), and the toast says Cover updated
+  - add a cover to a record without one; it gets the built name
+  - a record sharing its cover file with another gets its own `-{recordId}` file, and the other
+    record's cover is unchanged
   - a PNG is refused
   - a file over 10 MB is refused
   - the button is hidden for collections without covers
@@ -215,7 +245,9 @@ bucket, with only the `writeFiles` capability.
   (a visible file input and an Upload button is fine).
 - The shape of the action's success and failure results, and how the page tells this action's
   result apart from the Edit action's.
-- Where the `FileNameFmt` port and the name rules live, and the length and alphabet of
-  `{unique}`.
+- Where the `FileNameFmt` port and the name rules live.
+- How the page clears the cached cover and refreshes the image.
+- Confirming during the manual check that real cover URLs start with the authorize call's
+  `downloadUrl`. If Rivendell's covers use another host, the reuse rule needs that prefix too.
 - Whether the record page gets "B2 configured" from `load` or another way.
 - Mock B2 details.
