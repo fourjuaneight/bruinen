@@ -91,6 +91,21 @@ describe('resolveMetaIds', () => {
 		expect(kept.data.genre).toBe('m9');
 	});
 
+	it('keeps every row the record links for a duplicated tag name', async () => {
+		const { pb } = source([...meta, { id: 't7', name: 'go', type: 'tags' }]);
+		const current = {
+			tags: ['t1', 't7'],
+			expand: {
+				tags: [
+					{ id: 't1', name: 'go' },
+					{ id: 't7', name: 'go' }
+				]
+			}
+		};
+		const out = await resolveMetaIds(pb, articles, { tags: ['go', 'tech'] }, current);
+		expect(out.data.tags).toEqual(['t1', 't7', 't2']);
+	});
+
 	it('passes cleared relations and other fields through', async () => {
 		const { pb } = source(meta);
 		const out = await resolveMetaIds(pb, books, { genre: '', title: 'Dune' }, book());

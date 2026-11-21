@@ -102,6 +102,18 @@ function canonical(field: FieldDef, form: FormData): string | string[] | undefin
 }
 
 /**
+ * Tags compare as a set of names: the form submits them in option order, Rivendell stores them in
+ * meta row order, and one name can be linked through several duplicate meta rows.
+ */
+function same(field: FieldDef, submitted: unknown, stored: unknown): boolean {
+	if (field.type === 'tags') {
+		const names = (v: unknown) => [...new Set(Array.isArray(v) ? v.map(String) : [])].sort();
+		return JSON.stringify(names(submitted)) === JSON.stringify(names(stored));
+	}
+	return JSON.stringify(submitted) === JSON.stringify(stored);
+}
+
+/**
  * Turn the edit form into a PATCH payload holding only the fields that differ from the stored
  * record, so untouched values (a date's time of day, which duplicate meta row a relation points
  * at) are never rewritten. Emptied fields are sent as explicit empty values. Meta fields are
@@ -125,7 +137,7 @@ export function buildUpdate(
 			errors[field.name] = 'Required';
 			continue;
 		}
-		if (JSON.stringify(canonical(field, form)) === JSON.stringify(stored[field.name])) continue;
+		if (same(field, canonical(field, form), stored[field.name])) continue;
 		data[field.name] = value === undefined ? emptyValue(field) : value;
 	}
 	return { data, errors };

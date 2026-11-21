@@ -33,12 +33,20 @@ export async function loadMetaOptions(pb: MetaSource, def: CollectionDef): Promi
 
 type Expanded = { id?: unknown; name?: unknown };
 
-/** name → ID for the meta rows a record's relation field already points at. */
-function currentIds(record: Record<string, unknown>, field: string): Map<string, string> {
+/**
+ * name → IDs of the meta rows a record's relation field already points at. Rivendell's create links
+ * every row with a tag's name, so one name can map to several rows; all of them are kept.
+ */
+function currentIds(record: Record<string, unknown>, field: string): Map<string, string[]> {
 	const expand = (record.expand ?? {}) as Record<string, Expanded | Expanded[] | undefined>;
 	const value = expand[field];
 	const rows = Array.isArray(value) ? value : value ? [value] : [];
-	return new Map(rows.map((row) => [String(row.name), String(row.id)]));
+	const ids = new Map<string, string[]>();
+	for (const row of rows) {
+		const name = String(row.name);
+		ids.set(name, [...(ids.get(name) ?? []), String(row.id)]);
+	}
+	return ids;
 }
 
 /**
@@ -64,17 +72,20 @@ export async function resolveMetaIds(
 	const errors: FieldErrors = {};
 	for (const field of relations) {
 		const kept = currentIds(current, field.name);
-		const lookup = (name: string) => kept.get(name) ?? first(field.metaType as string, name);
+		const lookup = (name: string) => {
+			const id = first(field.metaType as string, name);
+			return kept.get(name) ?? (id ? [id] : []);
+		};
 		const value = data[field.name];
 		const names = Array.isArray(value) ? value.map(String) : value ? [String(value)] : [];
-		const unknown = names.filter((name) => !lookup(name));
+		const unknown = names.filter((name) => !lookup(name).length);
 		if (unknown.length) {
 			const noun =
 				field.type === 'tags' ? (unknown.length > 1 ? 'tags' : 'tag') : field.label.toLowerCase();
 			errors[field.name] = `Unknown ${noun}: ${unknown.join(', ')}`;
 			continue;
 		}
-		const ids = names.map((name) => lookup(name) as string);
+		const ids = names.flatMap(lookup);
 		out[field.name] = Array.isArray(value) ? ids : (ids[0] ?? '');
 	}
 	return { data: out, errors };

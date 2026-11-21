@@ -173,6 +173,48 @@ describe('buildUpdate', () => {
 		});
 	});
 
+	it('treats the same tags in another order, or duplicate tag rows, as unchanged', () => {
+		const base = { title: 'T', creator: 'C', url: 'https://x.test', favorite: false };
+		const fd = form([
+			['title', 'T'],
+			['creator', 'C'],
+			['url', 'https://x.test'],
+			['tags', 'go'],
+			['tags', 'tech']
+		]);
+		const reordered = {
+			...base,
+			tags: ['t2', 't1'],
+			expand: {
+				tags: [
+					{ id: 't2', name: 'tech' },
+					{ id: 't1', name: 'go' }
+				]
+			}
+		};
+		expect(buildUpdate(articles, fd, reordered).data).toEqual({});
+
+		// Rivendell's create links every meta row with a tag's name, so one name can appear twice.
+		const duplicated = {
+			...base,
+			tags: ['a1', 'a2'],
+			expand: {
+				tags: [
+					{ id: 'a1', name: 'art' },
+					{ id: 'a2', name: 'art' }
+				]
+			}
+		};
+		const art = form([
+			['title', 'T'],
+			['creator', 'C'],
+			['url', 'https://x.test'],
+			['tags', 'art'],
+			['favorite', 'on']
+		]);
+		expect(buildUpdate(articles, art, duplicated).data).toEqual({ favorite: true });
+	});
+
 	it('clears tags with an empty list only where they are optional', () => {
 		const article = {
 			title: 'T',
