@@ -2,16 +2,32 @@
 	import { onMount } from 'svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import type { CollectionDef } from '../collections.ts';
-	import type { CreateFormState } from '../forms.ts';
-	import CreateForm from './CreateForm.svelte';
+	import type { FormValues, RecordFormState } from '../forms.ts';
+	import RecordForm from './RecordForm.svelte';
 
 	interface Props {
 		def: CollectionDef;
 		meta: Partial<Record<string, string[]>>;
-		form: CreateFormState | null | undefined;
+		form: RecordFormState | null | undefined;
+		/** Edit opens the edit fields prefilled from `initial` and posts to ?/update. */
+		mode?: 'create' | 'edit';
+		initial?: FormValues;
+		/** Dialog heading; defaults to "New <label>" or "Edit". */
+		heading?: string;
 	}
 
-	let { def, meta, form }: Props = $props();
+	let { def, meta, form, mode = 'create', initial, heading }: Props = $props();
+
+	const title = $derived(heading ?? (mode === 'edit' ? 'Edit' : `New ${def.label}`));
+	const titleId = $derived(`${mode}-title`);
+	// Each open starts the edit form from the record again, so a cancelled edit leaves no trace.
+	// The create form keeps a cancelled draft, as before.
+	let opens = $state(0);
+
+	function open() {
+		if (mode === 'edit') opens += 1;
+		dialog?.showModal();
+	}
 
 	let dialog: HTMLDialogElement | undefined = $state();
 	let opener: HTMLButtonElement | undefined = $state();
@@ -57,17 +73,17 @@
 
 <button
 	type="button"
-	class="primary new-record"
+	class={mode === 'edit' ? 'edit-record' : 'primary new-record'}
 	bind:this={opener}
-	onclick={() => dialog?.showModal()}
+	onclick={open}
 >
-	New {def.label}
+	{mode === 'edit' ? 'Edit' : `New ${def.label}`}
 </button>
 
 <!-- WebKit does not restore focus on close, so send it back to the opener explicitly. -->
 <dialog
 	bind:this={dialog}
-	aria-labelledby="create-title"
+	aria-labelledby={titleId}
 	open={failed}
 	onclose={() => opener?.focus()}
 	onpointerdown={(event) => (pressedOnBackdrop = onBackdrop(event))}
@@ -77,12 +93,27 @@
 	}}
 >
 	<div class="dialog-header">
-		<h2 id="create-title">New {def.label}</h2>
+		<h2 id={titleId}>{title}</h2>
 		<button type="button" aria-label="Close" onclick={() => dialog?.close()}>✕</button>
 	</div>
-	<form method="POST" action="?/create" novalidate use:enhance={submit}>
-		<CreateForm {def} {meta} {form} {submitting} oncancel={() => dialog?.close()} />
-	</form>
+	{#key opens}
+		<form
+			method="POST"
+			action={mode === 'edit' ? '?/update' : '?/create'}
+			novalidate
+			use:enhance={submit}
+		>
+			<RecordForm
+				{def}
+				{meta}
+				{form}
+				{submitting}
+				{mode}
+				{initial}
+				oncancel={() => dialog?.close()}
+			/>
+		</form>
+	{/key}
 </dialog>
 
 <style>

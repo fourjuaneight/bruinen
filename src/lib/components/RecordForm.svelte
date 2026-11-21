@@ -1,21 +1,33 @@
 <script lang="ts">
 	import type { CollectionDef } from '../collections.ts';
-	import type { CreateFormState } from '../forms.ts';
+	import type { FormValues, RecordFormState } from '../forms.ts';
 	import FieldInput from './FieldInput.svelte';
 
 	interface Props {
 		def: CollectionDef;
 		meta: Partial<Record<string, string[]>>;
-		form: CreateFormState | null | undefined;
+		form: RecordFormState | null | undefined;
 		submitting: boolean;
 		oncancel?: () => void;
+		/** Edit shows the edit fields, prefilled from `initial`. */
+		mode?: 'create' | 'edit';
+		initial?: FormValues;
 	}
 
-	let { def, meta, form, submitting, oncancel }: Props = $props();
+	let { def, meta, form, submitting, oncancel, mode = 'create', initial }: Props = $props();
 
-	const submitLabel = $derived(
-		submitting ? (def.slowCreate ? 'Archiving… this can take a few minutes' : 'Saving…') : 'Save'
-	);
+	const fields = $derived(mode === 'edit' ? def.edit : def.create);
+	// After a failed submit, show exactly what was sent: falling back to the record per field would
+	// re-check a box the user had unchecked (an unchecked box is absent from the form).
+	const values = $derived(form?.values ?? initial ?? {});
+	const submitLabel = $derived.by(() => {
+		if (mode === 'edit') return submitting ? 'Saving…' : 'Save changes';
+		return submitting
+			? def.slowCreate
+				? 'Archiving… this can take a few minutes'
+				: 'Saving…'
+			: 'Save';
+	});
 </script>
 
 {#if form?.message}
@@ -23,15 +35,19 @@
 {/if}
 
 <div class="fields">
-	{#each def.create as field (field.name)}
+	{#each fields as field (field.name)}
 		<FieldInput
 			{field}
 			options={field.metaType ? (meta[field.metaType] ?? []) : []}
-			value={form?.values?.[field.name]}
+			value={values[field.name]}
 			error={form?.fields?.[field.name]}
 		/>
 	{/each}
 </div>
+
+{#if mode === 'edit' && def.enriched}
+	<p class="hint">Editing doesn't re-fetch covers or archives.</p>
+{/if}
 
 <div class="actions">
 	<button type="button" onclick={() => oncancel?.()}>Cancel</button>
@@ -45,6 +61,11 @@
 		display: grid;
 		gap: 1rem;
 		margin-bottom: 1.25rem;
+	}
+	.hint {
+		margin: 0 0 1rem;
+		font-size: 0.875rem;
+		color: var(--muted);
 	}
 	.actions {
 		display: grid;

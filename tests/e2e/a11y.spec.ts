@@ -12,14 +12,19 @@ async function noViolations(page: Page) {
 	expect(summary).toEqual([]);
 }
 
-/** Controls must be at least 44×44 CSS px. Links inside running text are exempt (WCAG 2.5.8). */
+/**
+ * Controls must be at least 44×44 CSS px. Links inside running text are exempt (WCAG 2.5.8).
+ * A checkbox wrapped in its label is measured by the label, since tapping the label toggles it.
+ */
 async function smallTargets(page: Page) {
 	return page.evaluate(() => {
 		const selector =
 			'button, input:not([type=hidden]), select, textarea, nav a, a.button, .cards a, main > ul a';
+		const target = (el: HTMLElement) =>
+			el instanceof HTMLInputElement && el.type === 'checkbox' ? (el.closest('label') ?? el) : el;
 		return [...document.querySelectorAll<HTMLElement>(selector)]
 			.filter((el) => el.offsetParent !== null && !el.closest('dialog:not([open])'))
-			.map((el) => ({ el, box: el.getBoundingClientRect() }))
+			.map((el) => ({ el, box: target(el).getBoundingClientRect() }))
 			.filter(({ box }) => box.width < 44 || box.height < 44)
 			.map(
 				({ el, box }) =>
@@ -68,6 +73,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
 				await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
 				await noViolations(page);
 			});
+
+			test('open edit dialog with errors', async ({ page }) => {
+				await page.goto('/books?view=table');
+				await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();
+				await page.getByRole('button', { name: 'Edit' }).click();
+				const dialog = page.getByRole('dialog', { name: /^Edit / });
+				await dialog.getByLabel('Title').fill('');
+				await dialog.getByRole('button', { name: 'Save changes' }).click();
+				await expect(dialog.getByRole('alert')).toBeVisible();
+				await noViolations(page);
+			});
 		});
 	});
 }
@@ -90,4 +106,9 @@ test('controls are at least 44px on a phone', async ({ page }) => {
 	await page.goto('/books');
 	await page.getByRole('button', { name: 'New Books' }).click();
 	expect(await smallTargets(page), 'create dialog').toEqual([]);
+	await page.goto('/books?view=table');
+	await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();
+	expect(await smallTargets(page), 'record detail').toEqual([]);
+	await page.getByRole('button', { name: 'Edit' }).click();
+	expect(await smallTargets(page), 'edit dialog').toEqual([]);
 });

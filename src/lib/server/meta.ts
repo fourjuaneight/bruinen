@@ -15,7 +15,7 @@ export interface MetaSource {
 
 /** Names for each meta type the collection's create form needs, sorted by name. */
 export async function loadMetaOptions(pb: MetaSource, def: CollectionDef): Promise<MetaOptions> {
-	const types = new Set(def.create.flatMap((f) => (f.metaType ? [f.metaType] : [])));
+	const types = new Set(def.edit.flatMap((f) => (f.metaType ? [f.metaType] : [])));
 	if (!types.size) return {};
 
 	const rows = await pb.collection('meta').getFullList({ sort: 'name', fields: 'name,type' });
@@ -70,11 +70,7 @@ export async function resolveMetaIds(
 		const unknown = names.filter((name) => !lookup(name));
 		if (unknown.length) {
 			const noun =
-				field.type === 'tags'
-					? unknown.length > 1
-						? 'tags'
-						: 'tag'
-					: field.label.toLowerCase();
+				field.type === 'tags' ? (unknown.length > 1 ? 'tags' : 'tag') : field.label.toLowerCase();
 			errors[field.name] = `Unknown ${noun}: ${unknown.join(', ')}`;
 			continue;
 		}

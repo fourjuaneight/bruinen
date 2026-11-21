@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CardGrid from '#lib/components/CardGrid.svelte';
-	import CreateDialog from '#lib/components/CreateDialog.svelte';
+	import RecordDialog from '#lib/components/RecordDialog.svelte';
 	import Toast from '#lib/components/Toast.svelte';
 	import DataTable from '#lib/components/DataTable.svelte';
 	import Pagination from '#lib/components/Pagination.svelte';
@@ -34,7 +34,7 @@
 	<div class="heading">
 		<h1>{data.def.label}</h1>
 		<span class="muted">{data.totalItems} {data.totalItems === 1 ? 'record' : 'records'}</span>
-		<CreateDialog def={data.def} meta={data.meta} form={failure} />
+		<RecordDialog def={data.def} meta={data.meta} form={failure} />
 		{#if data.def.image}
 			<nav class="view-toggle" aria-label="View">
 				<a

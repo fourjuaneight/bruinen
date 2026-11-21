@@ -208,7 +208,14 @@ describe('formValues', () => {
 	});
 
 	it('echoes edit fields, including a checked flag, when given the edit list', () => {
-		const values = formValues(books, form([['title', 'T'], ['favorite', 'on']]), books.edit);
+		const values = formValues(
+			books,
+			form([
+				['title', 'T'],
+				['favorite', 'on']
+			]),
+			books.edit
+		);
 		expect(values).toEqual({ title: 'T', favorite: 'on' });
 	});
 });

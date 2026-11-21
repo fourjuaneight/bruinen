@@ -234,3 +234,52 @@ recordRoutes.push(async (state, req, res, url, body) => {
 	json(res, 200, present(state, collection, record, []));
 	return true;
 });
+
+// ── Update ──────────────────────────────────────────────────────────────────
+
+const MISSING_REL = {
+	code: 'validation_missing_rel_records',
+	message: 'Failed to find all relation records with the provided ids.'
+};
+
+/**
+ * Like real PocketBase with no Rivendell hook: merges the body, validates required fields on the
+ * merged record, and rejects any relation value that isn't an existing meta ID (so a client that
+ * sends names fails here, as it would against Rivendell). An empty number is stored as 0.
+ */
+recordRoutes.push(async (state, req, res, url, body) => {
+	const match = url.pathname.match(ONE);
+	if (!match || req.method !== 'PATCH') return false;
+	const [, collection, id] = match;
+	const record = state.db[collection]?.find((r) => r.id === id);
+	if (!record) {
+		json(res, 404, { status: 404, message: "The requested resource wasn't found.", data: {} });
+		return true;
+	}
+
+	const fields = SCHEMA[collection];
+	const errors: Record<string, { code: string; message: string }> = {};
+	const merged: MockRecord = { ...record };
+	for (const [name, value] of Object.entries(body)) {
+		const field = fields.find((f) => f.name === name);
+		if (!field) continue;
+		if (field.type === 'relation') {
+			const ids = Array.isArray(value) ? value : value ? [value] : [];
+			if (ids.some((v) => !metaById(state, v))) errors[name] = MISSING_REL;
+		}
+		merged[name] = field.type === 'number' && value === null ? 0 : value;
+	}
+	for (const f of fields) {
+		const v = merged[f.name];
+		if (f.required && f.name !== 'id' && (v === '' || v == null || (Array.isArray(v) && !v.length)))
+			errors[f.name] ??= { code: 'validation_required', message: 'Cannot be blank.' };
+	}
+	if (Object.keys(errors).length) {
+		json(res, 400, { status: 400, message: 'Failed to update record.', data: errors });
+		return true;
+	}
+
+	Object.assign(record, merged);
+	json(res, 200, present(state, collection, record, []));
+	return true;
+});

@@ -1,9 +1,12 @@
 <script lang="ts">
 	import Cover from '#lib/components/Cover.svelte';
+	import RecordDialog from '#lib/components/RecordDialog.svelte';
+	import Toast from '#lib/components/Toast.svelte';
 	import { cellText, detailFields } from '#lib/format.ts';
+	import { recordValues } from '#lib/forms.ts';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	const titleField = $derived(
 		data.def.columns.find((c) => c.name === data.def.titleField) ?? data.def.columns[0]
@@ -11,6 +14,9 @@
 	const title = $derived(cellText(titleField, data.record) || 'Untitled');
 	const fields = $derived(detailFields(data.def, data.record));
 	const image = $derived(data.def.image ? String(data.record[data.def.image] ?? '') : '');
+	const initial = $derived(recordValues(data.def, data.record));
+	const updated = $derived(form && 'updated' in form ? form.updated : undefined);
+	const failure = $derived(form && !('updated' in form) ? form : null);
 </script>
 
 <svelte:head><title>{title} · {data.def.label} · Bruinen</title></svelte:head>
@@ -24,7 +30,17 @@
 			</div>
 		{/if}
 		<div>
-			<h1>{title}</h1>
+			<div class="title-row">
+				<h1>{title}</h1>
+				<RecordDialog
+					def={data.def}
+					meta={data.meta}
+					form={failure}
+					mode="edit"
+					{initial}
+					heading="Edit {title}"
+				/>
+			</div>
 			<dl>
 				{#each fields as field (field.name)}
 					<div class="row">
@@ -43,6 +59,12 @@
 	</article>
 </main>
 
+{#key form}
+	{#if updated}
+		<Toast message={updated.kind === 'updated' ? 'Saved changes' : 'No changes'} />
+	{/if}
+{/key}
+
 <style>
 	.record {
 		display: grid;
@@ -51,8 +73,15 @@
 	.cover {
 		max-width: 16rem;
 	}
+	.title-row {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
 	h1 {
-		margin-top: 0;
+		margin: 0;
 		overflow-wrap: anywhere;
 	}
 	dl {

@@ -5,9 +5,12 @@ A mobile-first web app for browsing, searching and adding records to [Rivendell]
 - Browse every Rivendell collection as a table, or as cover cards for movies, shows, games, books, CDs, vinyls and MTG.
 - Search and sort, with all list state in the URL.
 - Add records through Rivendell's create API, including barcode/ISBN scanning with the phone camera.
+- Edit a record from its page, with the same form plus its favorite/dead/shared flags.
 - Sign in with a Rivendell **superuser** account. The session lives in an httpOnly cookie, and the browser never talks to PocketBase directly.
 
-Bruinen only reads and creates. It never edits or deletes records.
+Bruinen reads, creates and edits records. It never deletes them.
+
+Edits are plain PocketBase updates: Rivendell has no update hook, so saving never re-fetches covers, archives or other enriched data. Bruinen sends only the fields you changed, and turns meta names into meta IDs itself.
 
 ## Stack
 

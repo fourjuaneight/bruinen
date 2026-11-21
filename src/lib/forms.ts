@@ -3,7 +3,7 @@ import type { CollectionDef, FieldDef } from './collections.ts';
 export type FormValues = Record<string, string | string[]>;
 
 /** What the create and update actions send back on failure (and what RecordForm renders). */
-export interface CreateFormState {
+export interface RecordFormState {
 	message?: string;
 	fields?: Record<string, string>;
 	values?: FormValues;
