@@ -1,4 +1,5 @@
 import type { CollectionDef, FieldDef } from './collections.ts';
+import { nameOf, type Item } from './format.ts';
 
 export type FormValues = Record<string, string | string[]>;
 
@@ -9,11 +10,6 @@ export interface RecordFormState {
 	values?: FormValues;
 	pending?: boolean;
 }
-
-type Item = Record<string, unknown> & { expand?: Record<string, unknown> };
-
-const nameOf = (value: unknown) =>
-	value && typeof value === 'object' && 'name' in value ? String(value.name) : '';
 
 function fieldValue(field: FieldDef, record: Item): string | string[] | undefined {
 	const raw = record[field.name];

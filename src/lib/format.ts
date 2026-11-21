@@ -1,9 +1,15 @@
 import type { CollectionDef, FieldDef } from './collections.ts';
 
-type Item = Record<string, unknown> & { expand?: Record<string, unknown> };
+/** A PocketBase record, with its expanded relations. */
+export type Item = Record<string, unknown> & { expand?: Record<string, unknown> };
 
-const nameOf = (value: unknown) =>
+/** The name of an expanded meta row, or '' for anything else. */
+export const nameOf = (value: unknown) =>
 	value && typeof value === 'object' && 'name' in value ? String(value.name) : '';
+
+/** A field the collection shows or creates, by name. */
+const knownField = (def: CollectionDef, name: string) =>
+	def.columns.find((f) => f.name === name) ?? def.create.find((f) => f.name === name);
 
 /** Plain-text value of a field for tables, cards and the detail page. */
 export function cellText(field: FieldDef, item: Item): string {
@@ -51,7 +57,7 @@ const humanize = (name: string) =>
 	name.charAt(0).toUpperCase() + name.slice(1).replaceAll('_', ' ');
 
 function fieldFor(def: CollectionDef, name: string, value: unknown): FieldDef {
-	const known = [...def.columns, ...def.create].find((f) => f.name === name);
+	const known = knownField(def, name);
 	if (known) return { ...known, label: known.label.replace(/ \(comma separated\)$/, '') };
 	if (def.expand.includes(name)) return { name, label: humanize(name), type: 'meta' };
 	if (typeof value === 'boolean') return { name, label: humanize(name), type: 'bool' };
@@ -65,10 +71,11 @@ export function detailFields(def: CollectionDef, record: Item): DetailField[] {
 	const fields: DetailField[] = [];
 	for (const [name, value] of Object.entries(record)) {
 		if (SYSTEM_FIELDS.has(name)) continue;
-		const raw = cellText(fieldFor(def, name, value), record);
+		const shown = fieldFor(def, name, value);
+		const raw = cellText(shown, record);
 		if (!raw) continue;
 		const text = TITLE_CASE_FIELDS.has(name) ? titleCase(raw) : raw;
-		const field: DetailField = { name, label: fieldFor(def, name, value).label, text };
+		const field: DetailField = { name, label: shown.label, text };
 		if (/^https?:\/\//.test(text)) field.href = text;
 		fields.push(field);
 	}
@@ -79,7 +86,7 @@ export function detailFields(def: CollectionDef, record: Item): DetailField[] {
 export function cardExtra(def: CollectionDef, item: Item): string {
 	const extra = def.cardExtra;
 	if (!extra) return '';
-	const field = [...def.columns, ...def.create].find((f) => f.name === extra.field);
+	const field = knownField(def, extra.field);
 	const text = field ? cellText(field, item) : '';
 	if (!text) return '';
 	return extra.style === 'season' ? `Season ${text}` : text.toUpperCase();
