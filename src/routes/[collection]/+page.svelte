@@ -92,25 +92,45 @@
 <style>
 	.heading {
 		display: flex;
-		align-items: baseline;
-		gap: 0.75rem;
+		align-items: center;
+		gap: 0.5rem 0.75rem;
 		flex-wrap: wrap;
+		margin-bottom: 0.5rem;
 	}
 	h1 {
 		margin: 0.5rem 0;
 	}
+	/* A segmented control: two joined halves, the height of the search field below it. */
 	.view-toggle {
 		display: flex;
-		gap: 0.25rem;
 		margin-left: auto;
 	}
 	.view-toggle a {
-		color: var(--text);
+		color: var(--muted);
+		min-width: 5.5rem;
+	}
+	.view-toggle a:first-child {
+		border-radius: var(--radius) 0 0 var(--radius);
+	}
+	.view-toggle a:last-child {
+		border-radius: 0 var(--radius) var(--radius) 0;
+		margin-left: -1px;
 	}
 	.view-toggle a[aria-current='page'] {
+		position: relative;
 		background: var(--accent);
 		border-color: var(--accent);
 		color: var(--accent-text);
+		font-weight: 600;
+	}
+	@media (max-width: 639px) {
+		/* Full width on phones, so its edges line up with the search row and sort select. */
+		.view-toggle {
+			flex-basis: 100%;
+		}
+		.view-toggle a {
+			flex: 1;
+		}
 	}
 	.empty {
 		padding-block: 2rem;
