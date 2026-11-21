@@ -1,7 +1,8 @@
 /**
  * Single source of truth for how Bruinen shows and creates records in each Rivendell collection.
  * Field names mirror rivendell/schema/collections.go; create fields mirror the "Send" lists in
- * rivendell/docs/API.md. Meta relations are submitted as names; Rivendell's preparers resolve them.
+ * rivendell/docs/API.md. Meta relations are submitted as names on create, where Rivendell's
+ * preparers resolve them; Rivendell has no update hook, so edits must send meta IDs instead.
  */
 
 export type MetaType = 'definition' | 'genre' | 'platform' | 'status' | 'tags';
@@ -34,6 +35,8 @@ export interface CollectionDef {
 	defaultSort: string;
 	expand: readonly string[];
 	create: readonly FieldDef[];
+	/** The edit form: every create field, then the favorite/dead/shared flags the collection stores. */
+	edit: readonly FieldDef[];
 	slowCreate?: boolean;
 	/** One extra detail on cards: a show's season or a game's platform. */
 	cardExtra?: { field: string; style: 'season' | 'uppercase' };
@@ -81,7 +84,9 @@ const comments: FieldDef = { name: 'comments', label: 'Comments', type: 'textare
 const year = num('year', 'Year');
 const ROWID = '-@rowid';
 
-function archivable(name: string, label: string, sendTitle: boolean): CollectionDef {
+type Draft = Omit<CollectionDef, 'edit'>;
+
+function archivable(name: string, label: string, sendTitle: boolean): Draft {
 	return {
 		name,
 		label,
@@ -113,7 +118,7 @@ function archivable(name: string, label: string, sendTitle: boolean): Collection
 	};
 }
 
-function music(name: string, label: string): CollectionDef {
+function music(name: string, label: string): Draft {
 	return {
 		name,
 		label,
@@ -137,7 +142,7 @@ function music(name: string, label: string): CollectionDef {
 	};
 }
 
-function screen(name: 'movies' | 'shows', label: string): CollectionDef {
+function screen(name: 'movies' | 'shows', label: string): Draft {
 	const season = name === 'shows' ? [num('season', 'Season')] : [];
 	return {
 		name,
@@ -175,7 +180,7 @@ function screen(name: 'movies' | 'shows', label: string): CollectionDef {
 	};
 }
 
-export const COLLECTIONS: readonly CollectionDef[] = [
+const DRAFTS: readonly Draft[] = [
 	screen('movies', 'Movies'),
 	screen('shows', 'Shows'),
 	{
@@ -390,6 +395,23 @@ export const COLLECTIONS: readonly CollectionDef[] = [
 		]
 	}
 ];
+
+/** Flags set to false by Rivendell on create, so the create form leaves them out. */
+const FLAGS: Record<string, readonly FieldDef[]> = {
+	articles: [bool('favorite', 'Favorite'), bool('dead', 'Dead'), bool('shared', 'Shared')],
+	podcasts: [bool('favorite', 'Favorite'), bool('dead', 'Dead'), bool('shared', 'Shared')],
+	videos: [bool('favorite', 'Favorite'), bool('dead', 'Dead'), bool('shared', 'Shared')],
+	feeds: [bool('dead', 'Dead'), bool('shared', 'Shared')],
+	books: [bool('favorite', 'Favorite')],
+	games: [bool('favorite', 'Favorite')],
+	movies: [bool('favorite', 'Favorite')],
+	shows: [bool('favorite', 'Favorite')]
+};
+
+export const COLLECTIONS: readonly CollectionDef[] = DRAFTS.map((def) => ({
+	...def,
+	edit: [...def.create, ...(FLAGS[def.name] ?? [])]
+}));
 
 const BY_NAME = new Map(COLLECTIONS.map((def) => [def.name, def]));
 

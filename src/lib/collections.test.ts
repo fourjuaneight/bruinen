@@ -77,6 +77,24 @@ describe('collection registry', () => {
 			else expect(scans).toEqual([]);
 		});
 
+		it('edits every create field plus the flags the collection stores', () => {
+			const editNames = def.edit.map((f) => f.name);
+			expect(editNames.slice(0, def.create.length)).toEqual(def.create.map((f) => f.name));
+			const flags = editNames.slice(def.create.length);
+			const stored = ['favorite', 'dead', 'shared'].filter((f) => fieldNames.includes(f));
+			expect(flags).toEqual(stored);
+			for (const flag of def.edit.slice(def.create.length)) expect(flag.type).toBe('bool');
+		});
+
+		it('gives every edit field a schema field of a matching type', () => {
+			const types: Record<string, string> = { meta: 'relation', tags: 'relation', bool: 'bool' };
+			for (const field of def.edit) {
+				const stored = fixture[name].find((f) => f.name === field.name);
+				expect(stored, `${name}.${field.name}`).toBeDefined();
+				if (types[field.type]) expect(stored?.type, `${name}.${field.name}`).toBe(types[field.type]);
+			}
+		});
+
 		it('flags slow creates only for archived collections', () => {
 			expect(Boolean(def.slowCreate)).toBe(['articles', 'podcasts', 'videos'].includes(name));
 		});
