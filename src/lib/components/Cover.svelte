@@ -17,6 +17,7 @@
 			{src}
 			{alt}
 			loading={eager ? 'eager' : 'lazy'}
+			fetchpriority={eager ? 'high' : undefined}
 			decoding="async"
 			onerror={() => (failed = true)}
 		/>
