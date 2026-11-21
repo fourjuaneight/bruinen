@@ -46,14 +46,27 @@ export async function replaceCover(
 	try {
 		const prefix = await deps.b2.publicPrefix();
 		let path = coverPath(def, record, prefix);
+		// Match the stored link as well as the rebuilt one: the same B2 file can be spelled with
+		// different escapes, and a record holding either form would lose its cover.
+		const urls = new Set([publicUrl(prefix, path)]);
+		if (typeof record.cover === 'string' && record.cover.startsWith(prefix)) {
+			urls.add(record.cover);
+		}
 		const { items } = await deps.pb.collection(def.name).getList(1, 2, {
-			filter: `cover = ${JSON.stringify(publicUrl(prefix, path))}`,
+			filter: [...urls]
+				.reverse()
+				.map((url) => `cover = ${JSON.stringify(url)}`)
+				.join(' || '),
 			fields: 'id'
 		});
 		if (items.some((item) => item.id !== record.id)) path = ownCoverPath(def, record);
 		url = await deps.b2.upload(path, stripped);
 	} catch (err) {
-		if (err instanceof B2Error) return invalid(COVER_MESSAGES.uploadFailed);
+		if (err instanceof B2Error) {
+			// The page only says "try again"; the cause (bad key, bucket ID, B2 outage) goes here.
+			console.error('Cover upload to B2 failed:', err);
+			return invalid(COVER_MESSAGES.uploadFailed);
+		}
 		throw err;
 	}
 

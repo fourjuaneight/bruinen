@@ -71,15 +71,19 @@ export function coverName(def: CollectionDef, record: Item): string {
 }
 
 /**
- * The B2 file name a new cover goes to. A cover already in the bucket keeps its exact path, so
- * the upload replaces that file; otherwise the name is built the way Rivendell builds it.
+ * The B2 file name a new cover goes to. A cover already in the bucket, in this collection's
+ * folder, keeps its exact path, so the upload replaces that file; otherwise the name is built
+ * the way Rivendell builds it.
  */
 export function coverPath(def: CollectionDef, record: Item, publicPrefix: string): string {
+	const folder = COVER_FOLDERS[def.name];
 	const current = typeof record.cover === 'string' ? record.cover : '';
-	if (current.startsWith(publicPrefix) && current.length > publicPrefix.length) {
+	// Only reuse a file in this collection's own folder, so a link pointing at another
+	// collection's cover never gets that file overwritten.
+	if (current.startsWith(`${publicPrefix}${folder}/`)) {
 		return current.slice(publicPrefix.length).split('/').map(decodeURIComponent).join('/');
 	}
-	return `${COVER_FOLDERS[def.name]}/${coverName(def, record)}.jpeg`;
+	return `${folder}/${coverName(def, record)}.jpeg`;
 }
 
 /** A file only this record uses, for when its cover file is shared with another record. */

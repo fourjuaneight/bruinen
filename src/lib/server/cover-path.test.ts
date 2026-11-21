@@ -90,6 +90,12 @@ describe('coverPath', () => {
 		expect(coverPath(def('movies'), record, PREFIX)).toBe('Movies/Alien-.jpeg');
 	});
 
+	it("builds a name when a bucket cover sits in another collection's folder", () => {
+		// Reusing it would overwrite a movie poster with a book cover.
+		const record = { id: 'b1', title: 'Dune', cover: PREFIX + 'Movies/Dune-2021.jpeg' };
+		expect(coverPath(def('books'), record, PREFIX)).toBe('Books/Dune.jpeg');
+	});
+
 	it('builds a name when the cover is hosted elsewhere', () => {
 		const record = { id: 'b1', title: 'Dune', cover: 'https://img.example/x.jpg' };
 		expect(coverPath(def('books'), record, PREFIX)).toBe('Books/Dune.jpeg');

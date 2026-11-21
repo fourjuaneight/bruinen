@@ -1,5 +1,5 @@
 import { ClientResponseError } from 'pocketbase';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { jpeg } from '../../../tests/fixtures/jpeg.ts';
 import { getCollection, type CollectionDef } from '../collections.ts';
 import { COVER_MESSAGES, MAX_COVER_BYTES } from '../covers.ts';
@@ -72,6 +72,18 @@ describe('replaceCover', () => {
 		]);
 	});
 
+	it('also matches the stored URL when it is encoded differently', async () => {
+		// A hand-pasted link with lowercase escapes still points at the same B2 file.
+		const { deps, lists } = fakes();
+		const stored = P + 'Books/Dune%2c_1965.jpeg';
+		await replaceCover(deps, books, dune(stored), BYTES);
+		const rebuilt = P + 'Books/Dune%2C_1965.jpeg';
+		expect(lists[0][3]).toEqual({
+			filter: `cover = ${JSON.stringify(stored)} || cover = ${JSON.stringify(rebuilt)}`,
+			fields: 'id'
+		});
+	});
+
 	it('uses its own file when another record shares the cover', async () => {
 		const shared = fakes({ others: [{ id: 'b1' }, { id: 'b2' }] });
 		await replaceCover(shared.deps, books, dune(P + 'Books/Dune.jpeg'), BYTES);
@@ -98,6 +110,19 @@ describe('replaceCover', () => {
 			expect(uploads).toEqual([]);
 			expect(lists).toEqual([]);
 		}
+	});
+
+	it('logs a B2 failure for the server log', async () => {
+		const failure = new B2Error('B2 400: bad_bucket_id', 400);
+		const logged: unknown[] = [];
+		const spy = vi.spyOn(console, 'error').mockImplementation((...args) => logged.push(...args));
+		try {
+			const { deps } = fakes({ upload: () => Promise.reject(failure) });
+			await replaceCover(deps, books, dune(), BYTES);
+		} finally {
+			spy.mockRestore();
+		}
+		expect(logged).toContain(failure);
 	});
 
 	it('reports a B2 failure without touching the record', async () => {
