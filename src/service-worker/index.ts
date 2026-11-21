@@ -7,12 +7,13 @@
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { self as sw } from '$app/service-worker';
+// Covers keep their URL across deploys, so this cache does too. A cover replaced in place is
+// cleared from it by the page that uploaded it (src/lib/cover-cache.ts).
+import { IMAGE_CACHE } from '../lib/cover-cache.ts';
 
 const STATIC_PREFIX = 'bruinen-static-';
 /** Hashed build output plus `static/`, renamed every deploy so old caches can be dropped. */
 const STATIC_CACHE = `${STATIC_PREFIX}${version}`;
-/** Covers keep their URL across deploys, so this cache does too. */
-const IMAGE_CACHE = 'bruinen-images';
 /**
  * Oldest covers past this count are evicted. Covers load cross-origin from B2 as opaque
  * responses, which Chrome counts as several MB each against the origin's storage quota.

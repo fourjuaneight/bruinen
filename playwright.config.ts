@@ -40,7 +40,18 @@ export default defineConfig({
 					{
 						command: 'pnpm run build && node build',
 						url: `${APP}/`,
-						env: { ORIGIN: APP, PORT: '4173', POCKETBASE_URL: MOCK_PB },
+						env: {
+							ORIGIN: APP,
+							PORT: '4173',
+							POCKETBASE_URL: MOCK_PB,
+							// Cover uploads go to the mock B2 routes on the mock PocketBase server.
+							B2_APP_KEY_ID: 'test-key-id',
+							B2_APP_KEY: 'test-key',
+							B2_BUCKET_ID: 'bucket-test',
+							B2_BUCKET_NAME: 'bruinen-covers',
+							B2_API_URL: MOCK_PB,
+							BODY_SIZE_LIMIT: '12M'
+						},
 						reuseExistingServer: !process.env.CI,
 						timeout: 180_000
 					}

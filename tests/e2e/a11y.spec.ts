@@ -14,14 +14,17 @@ async function noViolations(page: Page) {
 
 /**
  * Controls must be at least 44×44 CSS px. Links inside running text are exempt (WCAG 2.5.8).
- * A checkbox wrapped in its label is measured by the label, since tapping the label toggles it.
+ * A checkbox or file input wrapped in its label is measured by the label, since tapping the
+ * label works it (the cover upload's file input is visually hidden inside a button-like label).
  */
 async function smallTargets(page: Page) {
 	return page.evaluate(() => {
 		const selector =
 			'button, input:not([type=hidden]), select, textarea, nav a, a.button, .cards a, main > ul a';
 		const target = (el: HTMLElement) =>
-			el instanceof HTMLInputElement && el.type === 'checkbox' ? (el.closest('label') ?? el) : el;
+			el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'file')
+				? (el.closest('label') ?? el)
+				: el;
 		return [...document.querySelectorAll<HTMLElement>(selector)]
 			.filter((el) => el.offsetParent !== null && !el.closest('dialog:not([open])'))
 			.map((el) => ({ el, box: target(el).getBoundingClientRect() }))
@@ -63,6 +66,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
 				await page.goto('/books?view=table');
 				await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();
 				await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+				await noViolations(page);
+			});
+
+			test('cover upload with an error', async ({ page }) => {
+				await page.goto('/games?view=cards');
+				await page
+					.getByRole('link', { name: /Hollow Knight/ })
+					.first()
+					.click();
+				await page.getByLabel('Replace cover').setInputFiles('tests/e2e/fixtures/cover.png');
+				await expect(page.getByText('Choose a JPEG image.')).toBeVisible();
 				await noViolations(page);
 			});
 
@@ -109,6 +123,7 @@ test('controls are at least 44px on a phone', async ({ page }) => {
 	await page.goto('/books?view=table');
 	await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();
 	expect(await smallTargets(page), 'record detail').toEqual([]);
+	await expect(page.getByLabel('Replace cover')).toBeAttached();
 	await page.getByRole('button', { name: 'Edit' }).click();
 	expect(await smallTargets(page), 'edit dialog').toEqual([]);
 });

@@ -4,6 +4,8 @@ export type Db = Record<string, MockRecord[]>;
 export const MOCK_ORIGIN = 'http://127.0.0.1:8099';
 export const COVER_OK = `${MOCK_ORIGIN}/covers/ok.png`;
 export const COVER_MISSING = `${MOCK_ORIGIN}/covers/missing.png`;
+/** A cover stored in the mock B2 bucket (see b2.ts). */
+export const B2_COVER = (path: string) => `${MOCK_ORIGIN}/file/bruinen-covers/${path}`;
 
 let counter = 0;
 const id = () => `rec${String(++counter).padStart(12, '0')}`;
@@ -70,7 +72,7 @@ export function seed(): Db {
 				platform: m('pc'),
 				status: m('completed'),
 				favorite: true,
-				cover: COVER_OK
+				cover: B2_COVER('Games/Hollow_Knight.jpeg')
 			}
 		]),
 		books: table([
@@ -82,7 +84,7 @@ export function seed(): Db {
 				genre: m('fiction'),
 				status: m('completed'),
 				favorite: false,
-				cover: COVER_OK
+				cover: B2_COVER('Books/Nineteen_Eighty-Four.jpeg')
 			},
 			{
 				title: 'Dune',
@@ -102,7 +104,8 @@ export function seed(): Db {
 				genre: m('fiction'),
 				status: m('in_progress'),
 				favorite: false,
-				cover: COVER_OK
+				// Shares Nineteen Eighty-Four's file, the way Rivendell can name two records alike.
+				cover: B2_COVER('Books/Nineteen_Eighty-Four.jpeg')
 			}
 		]),
 		cds: table([

@@ -3,6 +3,7 @@
  * Runs with plain `node` (type stripping), so only erasable TypeScript syntax is allowed here.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { handleB2, seedB2 } from './b2.ts';
 import { recordRoutes } from './routes.ts';
 import './records.ts';
 import { seed, type Db } from './seed.ts';
@@ -35,10 +36,12 @@ export interface MockState {
 	tokens: Set<string>;
 	delayMs: number;
 	down: boolean;
+	/** Mock B2 files, by B2 file name. */
+	b2: Map<string, Buffer>;
 }
 
 export function freshState(): MockState {
-	return { db: seed(), tokens: new Set(), delayMs: 0, down: false };
+	return { db: seed(), tokens: new Set(), delayMs: 0, down: false, b2: seedB2() };
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -68,6 +71,8 @@ function authed(state: MockState, req: IncomingMessage): boolean {
 
 export async function handle(state: MockState, req: IncomingMessage, res: ServerResponse) {
 	const url = new URL(req.url ?? '/', 'http://mock');
+	// B2 bodies are binary, so these routes run before the body is read as JSON.
+	if (await handleB2(state.b2, req, res, url)) return;
 	const body = req.method === 'POST' || req.method === 'PATCH' ? await readJson(req) : {};
 
 	if (url.pathname === '/__mock/reset') {

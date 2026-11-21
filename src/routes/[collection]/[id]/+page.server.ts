@@ -1,5 +1,8 @@
 import { error, fail } from '@sveltejs/kit';
 import { getCollection } from '#lib/collections.ts';
+import { COVER_MESSAGES } from '#lib/covers.ts';
+import { b2 } from '#lib/server/b2.ts';
+import { replaceCover } from '#lib/server/cover.ts';
 import { loadMetaOptions, resolveMetaIds } from '#lib/server/meta.ts';
 import { buildUpdate, formValues } from '#lib/server/payload.ts';
 import { updateRecord } from '#lib/server/update.ts';
@@ -27,7 +30,7 @@ export const load: PageServerLoad = async ({ params, locals, request, url }) => 
 		}
 	}
 
-	return { def, record, backHref, meta };
+	return { def, record, backHref, meta, canUploadCover: def.image === 'cover' && b2() !== null };
 };
 
 export const actions: Actions = {
@@ -64,5 +67,22 @@ export const actions: Actions = {
 			return fail(400, { message: updated.message, fields: updated.fields, values });
 		}
 		return { updated };
+	},
+
+	cover: async ({ params, request, locals }) => {
+		const def = getCollection(params.collection);
+		const client = b2();
+		if (!def || def.image !== 'cover' || !client) error(404, 'Not found');
+
+		const form = await request.formData();
+		const file = form.get('cover');
+		if (!(file instanceof File) || !file.size) {
+			return fail(400, { cover: { message: COVER_MESSAGES.notJpeg } });
+		}
+		const record = await locals.pb.collection(def.name).getOne(params.id);
+		const bytes = new Uint8Array(await file.arrayBuffer());
+		const result = await replaceCover({ b2: client, pb: locals.pb }, def, record, bytes);
+		if (result.kind === 'invalid') return fail(400, { cover: { message: result.message } });
+		return { cover: result };
 	}
 };

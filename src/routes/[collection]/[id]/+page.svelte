@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Cover from '#lib/components/Cover.svelte';
+	import CoverUpload from '#lib/components/CoverUpload.svelte';
 	import RecordDialog from '#lib/components/RecordDialog.svelte';
 	import Toast from '#lib/components/Toast.svelte';
 	import { cellText, detailFields } from '#lib/format.ts';
@@ -16,7 +17,10 @@
 	const image = $derived(data.def.image ? String(data.record[data.def.image] ?? '') : '');
 	const initial = $derived(recordValues(data.def, data.record));
 	const updated = $derived(form && 'updated' in form ? form.updated : undefined);
-	const failure = $derived(form && !('updated' in form) ? form : null);
+	// Cover results always carry `cover`, edit results never do, so a failed upload never opens
+	// the Edit dialog.
+	const failure = $derived(form && !('updated' in form) && !('cover' in form) ? form : null);
+	const cover = $derived(form && 'cover' in form ? form.cover : undefined);
 </script>
 
 <svelte:head><title>{title} · {data.def.label} · Bruinen</title></svelte:head>
@@ -26,7 +30,16 @@
 	<article class="record" class:has-image={data.def.image}>
 		{#if data.def.image}
 			<div class="cover">
-				<Cover src={image} alt={title} aspect={data.def.imageAspect ?? '2 / 3'} eager />
+				<!-- Remount after an upload: a cover replaced in place keeps its URL. -->
+				{#key cover}
+					<Cover src={image} alt={title} aspect={data.def.imageAspect ?? '2 / 3'} eager />
+				{/key}
+				{#if data.canUploadCover}
+					<CoverUpload
+						hasCover={Boolean(image)}
+						error={cover && 'message' in cover ? cover.message : undefined}
+					/>
+				{/if}
 			</div>
 		{/if}
 		<div>
@@ -62,6 +75,8 @@
 {#key form}
 	{#if updated}
 		<Toast message={updated.kind === 'updated' ? 'Saved changes' : 'No changes'} />
+	{:else if cover && 'kind' in cover}
+		<Toast message="Cover updated" />
 	{/if}
 {/key}
 

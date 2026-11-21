@@ -33,4 +33,17 @@ export const test = base.extend<{ resetMock: void }>({
 	]
 });
 
+/** Every URL stored in the caches whose name starts with `prefix`. */
+export async function cachedUrls(page: Page, prefix: string) {
+	return page.evaluate(async (prefix) => {
+		const names = (await caches.keys()).filter((name) => name.startsWith(prefix));
+		const urls: string[] = [];
+		for (const name of names) {
+			const cache = await caches.open(name);
+			urls.push(...(await cache.keys()).map((request) => request.url));
+		}
+		return urls;
+	}, prefix);
+}
+
 export { expect };
