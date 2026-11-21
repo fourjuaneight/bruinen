@@ -174,13 +174,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      pocketbase:
-        specifier: 0.29.0
-        version: 0.29.0
-      undici:
-        specifier: 8.12.4
-        version: 8.12.4
     devDependencies:
       '@axe-core/playwright':
         specifier: 4.14.0
@@ -227,6 +220,9 @@ importers:
       playwright:
         specifier: 1.65.1
         version: 1.65.1
+      pocketbase:
+        specifier: 0.29.0
+        version: 0.29.0
       prettier:
         specifier: 3.10.1
         version: 3.10.1
@@ -245,6 +241,9 @@ importers:
       typescript-eslint:
         specifier: 8.73.0
         version: 8.73.0(eslint@10.15.0)(typescript@6.0.3)
+      undici:
+        specifier: 8.12.4
+        version: 8.12.4
       vite:
         specifier: 8.3.8
         version: 8.3.8(@types/node@24.19.2)

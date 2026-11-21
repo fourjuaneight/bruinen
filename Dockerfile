@@ -5,13 +5,13 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm run build && pnpm prune --prod
+RUN pnpm run build
 
 FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 BODY_SIZE_LIMIT=12M
+# The build bundles every package it uses; package.json only marks its files as ES modules.
 COPY --from=builder --chown=node:node /app/build ./build
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 USER node
 EXPOSE 3000

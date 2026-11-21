@@ -51,6 +51,12 @@ describe.skipIf(!hasDocker)('docker-compose.yml', () => {
 });
 
 describe('Dockerfile', () => {
+	it('ships only the build: adapter-node bundles every package not listed in dependencies', () => {
+		const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+		expect(pkg.dependencies ?? {}).toEqual({});
+		expect(readFileSync('Dockerfile', 'utf8')).not.toContain('node_modules');
+	});
+
 	it('raises the body size limit so 10 MB cover uploads reach the server', () => {
 		expect(readFileSync('Dockerfile', 'utf8')).toMatch(/^ENV .*\bBODY_SIZE_LIMIT=12M\b/m);
 	});

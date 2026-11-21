@@ -39,20 +39,18 @@
 		"eslint-plugin-svelte": "3.24.1",
 		"globals": "17.14.0",
 		"playwright": "1.65.1",
+		"pocketbase": "0.29.0",
 		"prettier": "3.10.1",
 		"prettier-plugin-svelte": "4.2.0",
 		"svelte": "5.57.3",
 		"svelte-check": "4.7.8",
 		"typescript": "6.0.3",
 		"typescript-eslint": "8.73.0",
+		"undici": "8.12.4",
 		"vite": "8.3.8",
 		"vitest": "5.1.1",
 		"vitest-browser-svelte": "3.1.0",
 		"zxing-wasm": "3.1.7"
-	},
-	"dependencies": {
-		"pocketbase": "0.29.0",
-		"undici": "8.12.4"
 	},
 	"packageManager": "pnpm@12.21.0+sha512.66fd8278ee28935ce951792d34367ff3af5c432a2756445823029533835b8da529bbe0be5130afd56ed0713fb8789e47bad82d93bd5ae2fe54b15562d6276ef0"
 }
