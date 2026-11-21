@@ -1,4 +1,4 @@
-import { expect, login, mock, test } from './helpers.ts';
+import { expect, hits, login, mock, test } from './helpers.ts';
 
 test.beforeEach(async ({ page }) => login(page));
 
@@ -24,6 +24,18 @@ test('searches with quotes in the text', async ({ page }) => {
 	await expect(page).toHaveURL(/q=o%27brien/);
 	await expect(page.locator('tbody tr')).toHaveCount(1);
 	await expect(page.getByRole('link', { name: "O'Brien" })).toBeVisible();
+});
+
+test('searching and paging reuse the meta options loaded with the collection', async ({ page }) => {
+	const META = 'GET /api/collections/meta/records';
+	await page.goto('/movies?view=table');
+	const loaded = await hits(META);
+	expect(loaded).toBeGreaterThan(0);
+	await page.getByLabel('Search Movies').fill('movie');
+	await expect(page).toHaveURL(/q=movie/);
+	await page.getByRole('link', { name: 'Next page' }).click();
+	await expect(page.getByText('Page 2 of 2')).toBeVisible();
+	expect(await hits(META)).toBe(loaded);
 });
 
 test('search finds a record by any one of its tags', async ({ page }) => {

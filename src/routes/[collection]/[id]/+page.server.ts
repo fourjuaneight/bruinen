@@ -3,7 +3,7 @@ import { getCollection } from '#lib/collections.ts';
 import { COVER_MESSAGES } from '#lib/covers.ts';
 import { b2 } from '#lib/server/b2.ts';
 import { replaceCover } from '#lib/server/cover.ts';
-import { loadMetaOptions, resolveMetaIds } from '#lib/server/meta.ts';
+import { resolveMetaIds } from '#lib/server/meta.ts';
 import { buildUpdate, formValues } from '#lib/server/payload.ts';
 import { updateRecord } from '#lib/server/update.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -12,12 +12,9 @@ export const load: PageServerLoad = async ({ params, locals, request, url }) => 
 	const def = getCollection(params.collection);
 	if (!def) error(404, 'Not found');
 
-	const [record, meta] = await Promise.all([
-		locals.pb.collection(def.name).getOne(params.id, {
-			expand: def.expand.length ? def.expand.join(',') : undefined
-		}),
-		loadMetaOptions(locals.pb, def)
-	]);
+	const record = await locals.pb.collection(def.name).getOne(params.id, {
+		expand: def.expand.length ? def.expand.join(',') : undefined
+	});
 
 	// Return to the exact list the user came from (search, sort, page, view), but only for
 	// a same-origin referrer pointing at this collection's list.
@@ -30,7 +27,7 @@ export const load: PageServerLoad = async ({ params, locals, request, url }) => 
 		}
 	}
 
-	return { def, record, backHref, meta, canUploadCover: def.image === 'cover' && b2() !== null };
+	return { record, backHref, canUploadCover: def.image === 'cover' && b2() !== null };
 };
 
 export const actions: Actions = {
