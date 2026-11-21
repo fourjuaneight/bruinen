@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { MOCK_ORIGIN } from './seed.ts';
+import type { MockState } from './server.ts';
 
 export const B2_BUCKET = 'bruinen-covers';
 export const B2_FILES = `${MOCK_ORIGIN}/file/${B2_BUCKET}/`;
@@ -38,12 +39,19 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
 
 /** Handles B2 routes before the mock reads the body as JSON; false for anything else. */
 export async function handleB2(
-	files: Map<string, Buffer>,
+	state: MockState,
 	req: IncomingMessage,
 	res: ServerResponse,
 	url: URL
 ): Promise<boolean> {
 	const auth = req.headers.authorization ?? '';
+	const files = state.b2;
+
+	if (url.pathname === '/__mock/b2-down') {
+		state.b2Down = Boolean(JSON.parse((await readBody(req)).toString() || '{}').down);
+		send(res, 200, { ok: true });
+		return true;
+	}
 
 	if (url.pathname === '/__mock/b2') {
 		send(res, 200, [...files.keys()]);
@@ -75,7 +83,8 @@ export async function handleB2(
 		const body = await readBody(req);
 		const name = decodeURIComponent(String(req.headers['x-bz-file-name'] ?? ''));
 		const sha1 = createHash('sha1').update(body).digest('hex');
-		if (auth !== UPLOAD_TOKEN) b2Error(res, 401, 'expired_auth_token');
+		if (state.b2Down) b2Error(res, 503, 'service_unavailable');
+		else if (auth !== UPLOAD_TOKEN) b2Error(res, 401, 'expired_auth_token');
 		else if (!name || req.headers['x-bz-content-sha1'] !== sha1) b2Error(res, 400, 'bad_request');
 		else {
 			files.set(name, body);

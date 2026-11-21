@@ -38,10 +38,12 @@ export interface MockState {
 	down: boolean;
 	/** Mock B2 files, by B2 file name. */
 	b2: Map<string, Buffer>;
+	/** When set, B2 uploads fail with 503. */
+	b2Down: boolean;
 }
 
 export function freshState(): MockState {
-	return { db: seed(), tokens: new Set(), delayMs: 0, down: false, b2: seedB2() };
+	return { db: seed(), tokens: new Set(), delayMs: 0, down: false, b2: seedB2(), b2Down: false };
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -72,7 +74,7 @@ function authed(state: MockState, req: IncomingMessage): boolean {
 export async function handle(state: MockState, req: IncomingMessage, res: ServerResponse) {
 	const url = new URL(req.url ?? '/', 'http://mock');
 	// B2 bodies are binary, so these routes run before the body is read as JSON.
-	if (await handleB2(state.b2, req, res, url)) return;
+	if (await handleB2(state, req, res, url)) return;
 	const body = req.method === 'POST' || req.method === 'PATCH' ? await readJson(req) : {};
 
 	if (url.pathname === '/__mock/reset') {

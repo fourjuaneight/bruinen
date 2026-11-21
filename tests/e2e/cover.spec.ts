@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { MAX_COVER_BYTES } from '../../src/lib/covers.ts';
-import { cachedUrls, expect, login, MOCK_PB, test } from './helpers.ts';
+import { cachedUrls, expect, login, mock, MOCK_PB, test } from './helpers.ts';
 import { B2_COVER } from './mock-pb/seed.ts';
 
 const BLUE = 'tests/e2e/fixtures/cover-60x40.jpeg';
@@ -60,6 +60,25 @@ test('gives a record its own file when it shares one', async ({ page }) => {
 	await open(page, '/books?view=cards', /Kindred/);
 	await expect(img(page)).toHaveAttribute('src', B2_COVER('Books/Nineteen_Eighty-Four.jpeg'));
 	await expect.poll(() => width(page)).toBe(40);
+});
+
+test('a failed upload can be retried with the same file', async ({ page }) => {
+	await open(page, '/games?view=cards', /Hollow Knight/);
+	await mock('b2-down', { down: true });
+
+	await coverInput(page).setInputFiles(BLUE);
+
+	await expect(page.getByText("Couldn't upload the cover. Try again.")).toBeVisible();
+	// Browsers fire no change event when the same file is picked again, so the pick is cleared.
+	await expect
+		.poll(() => coverInput(page).evaluate((i: HTMLInputElement) => i.files?.length ?? 0))
+		.toBe(0);
+	await expect.poll(() => width(page)).toBe(40);
+
+	await mock('b2-down', { down: false });
+	await coverInput(page).setInputFiles(BLUE);
+	await expect(page.getByRole('status')).toContainText('Cover updated');
+	await expect.poll(() => width(page)).toBe(60);
 });
 
 test('refuses a PNG labelled as JPEG', async ({ page }) => {

@@ -26,15 +26,21 @@
 		const input = event.currentTarget as HTMLInputElement;
 		picked = true;
 		browserError = coverFileError(input.files?.[0]);
-		if (!browserError) form?.requestSubmit();
+		// Browsers fire no change event for the same file twice, so clear a refused pick.
+		if (browserError) input.value = '';
+		else form?.requestSubmit();
 	}
 
-	const submit: SubmitFunction = () => {
+	const submit: SubmitFunction = ({ formElement }) => {
 		uploading = true;
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
 				const cover = result.data?.cover as { url?: string } | undefined;
 				if (cover?.url) await refreshCachedImage(cover.url);
+			} else {
+				// SvelteKit only resets the form on success; clear the pick so the same file can
+				// be tried again (picking it again would fire no change event).
+				formElement.reset();
 			}
 			uploading = false;
 			picked = false;
