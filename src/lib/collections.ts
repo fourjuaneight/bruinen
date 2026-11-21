@@ -38,6 +38,8 @@ export interface CollectionDef {
 	/** The edit form: every create field, then the favorite/dead/shared flags the collection stores. */
 	edit: readonly FieldDef[];
 	slowCreate?: boolean;
+	/** Rivendell fetches extra data after create (covers, archives, metadata); edits never re-run it. */
+	enriched?: boolean;
 	/** One extra detail on cards: a show's season or a game's platform. */
 	cardExtra?: { field: string; style: 'season' | 'uppercase' };
 }
@@ -408,9 +410,21 @@ const FLAGS: Record<string, readonly FieldDef[]> = {
 	shows: [bool('favorite', 'Favorite')]
 };
 
+/** Mirrors the enrichers map in rivendell/main.go. */
+const ENRICHED = new Set(
+	['articles', 'podcasts', 'videos', 'github', 'mtg', 'books', 'cds'].concat([
+		'games',
+		'movies',
+		'shows',
+		'vinyls',
+		'watch_later'
+	])
+);
+
 export const COLLECTIONS: readonly CollectionDef[] = DRAFTS.map((def) => ({
 	...def,
-	edit: [...def.create, ...(FLAGS[def.name] ?? [])]
+	edit: [...def.create, ...(FLAGS[def.name] ?? [])],
+	...(ENRICHED.has(def.name) ? { enriched: true } : {})
 }));
 
 const BY_NAME = new Map(COLLECTIONS.map((def) => [def.name, def]));

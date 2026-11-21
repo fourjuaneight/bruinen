@@ -91,8 +91,21 @@ describe('collection registry', () => {
 			for (const field of def.edit) {
 				const stored = fixture[name].find((f) => f.name === field.name);
 				expect(stored, `${name}.${field.name}`).toBeDefined();
-				if (types[field.type]) expect(stored?.type, `${name}.${field.name}`).toBe(types[field.type]);
+				if (types[field.type])
+					expect(stored?.type, `${name}.${field.name}`).toBe(types[field.type]);
 			}
+		});
+
+		it('marks the collections Rivendell enriches after create', () => {
+			// Mirrors the enrichers map in rivendell/main.go.
+			const enriched = ['articles', 'podcasts', 'videos', 'github', 'mtg', 'books', 'cds'].concat([
+				'games',
+				'movies',
+				'shows',
+				'vinyls',
+				'watch_later'
+			]);
+			expect(Boolean(def.enriched)).toBe(enriched.includes(name));
 		});
 
 		it('flags slow creates only for archived collections', () => {
