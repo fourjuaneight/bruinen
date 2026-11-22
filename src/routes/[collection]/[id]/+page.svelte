@@ -32,7 +32,13 @@
 			<div class="cover">
 				<!-- Remount after an upload: a cover replaced in place keeps its URL. -->
 				{#key cover}
-					<Cover src={image} alt={title} aspect={data.def.imageAspect ?? '2 / 3'} eager />
+					<Cover
+						src={image}
+						{title}
+						alt="Cover of {title}"
+						aspect={data.def.imageAspect ?? '2 / 3'}
+						eager
+					/>
 				{/key}
 				{#if data.canUploadCover}
 					<CoverUpload

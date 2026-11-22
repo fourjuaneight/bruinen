@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CollectionDef } from '../collections.ts';
 	import { listHref, type ListQuery } from '../list.ts';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		def: CollectionDef;
@@ -18,30 +19,55 @@
 			href={listHref(def, query, { page: query.page - 1 })}
 			aria-label="Previous page"
 		>
-			← Prev
+			<Icon name="chevron-left" size={16} />Previous
 		</a>
 	{:else}
-		<span></span>
+		<span class="button disabled" role="link" aria-disabled="true">
+			<Icon name="chevron-left" size={16} />Previous
+		</span>
 	{/if}
-	<span>Page {query.page} of {totalPages}</span>
+	<span class="pages">Page {query.page} of {totalPages}</span>
 	{#if query.page < totalPages}
 		<a class="button" href={listHref(def, query, { page: query.page + 1 })} aria-label="Next page">
-			Next →
+			Next<Icon name="chevron-right" size={16} />
 		</a>
 	{:else}
-		<span></span>
+		<span class="button disabled" role="link" aria-disabled="true">
+			Next<Icon name="chevron-right" size={16} />
+		</span>
 	{/if}
 </nav>
 
 <style>
 	.pagination {
-		display: grid;
-		grid-template-columns: 1fr auto 1fr;
+		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding-block: 1rem;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 48px;
+		padding-top: 24px;
+		border-top: 1px solid var(--border);
 	}
-	.pagination > :last-child {
-		justify-self: end;
+	:global(main.table-view) .pagination {
+		margin-top: 32px;
+		padding-top: 0;
+		border-top: 0;
+	}
+	.button {
+		padding: 0 16px;
+		font-size: 15px;
+	}
+	.disabled {
+		border-color: var(--border);
+		opacity: 0.6;
+		cursor: default;
+	}
+	.disabled:hover {
+		background: var(--surface);
+	}
+	.pages {
+		color: var(--muted);
+		font-size: 14px;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

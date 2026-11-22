@@ -1,7 +1,9 @@
 <script lang="ts">
-	import type { CollectionDef } from '../collections.ts';
-	import { cellText } from '../format.ts';
-	import { listHref, nextSort, sortState, type ListQuery } from '../list.ts';
+	import type { CollectionDef, FieldDef } from '../collections.ts';
+	import { cellText, flagBadges, nameOf, titleCase } from '../format.ts';
+	import { listHref, nextSort, sortCaption, sortState, type ListQuery } from '../list.ts';
+	import Chip from './Chip.svelte';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		def: CollectionDef;
@@ -11,51 +13,72 @@
 
 	let { def, items, query }: Props = $props();
 
-	const SORT_MARKS = { ascending: '▲', descending: '▼', none: '' } as const;
-
 	const linkColumn = $derived(
 		def.columns.find((c) => c.name === def.titleField)?.name ?? def.columns[0].name
 	);
+	// The flags share one "Flags" column of badges instead of a Yes column each.
+	const columns = $derived(def.columns.filter((c) => c.type !== 'bool'));
+	const hasFlags = $derived(def.edit.some((f) => f.type === 'bool'));
+	const muted = (column: FieldDef) =>
+		column.name !== linkColumn && ['text', 'number', 'date'].includes(column.type);
+	const tagNames = (item: Record<string, unknown>) => {
+		const tags = (item.expand as Record<string, unknown> | undefined)?.tags;
+		return Array.isArray(tags) ? tags.map(nameOf).filter(Boolean) : [];
+	};
 </script>
 
 <div class="table-wrap">
-	<!-- Explicit roles keep table semantics when the phone layout switches to display:block. -->
-	<!-- svelte-ignore a11y_no_redundant_roles -->
-	<table role="table">
-		<caption class="visually-hidden">{def.label}</caption>
-		<!-- svelte-ignore a11y_no_redundant_roles -->
-		<thead role="rowgroup">
-			<!-- svelte-ignore a11y_no_redundant_roles -->
-			<tr role="row">
-				{#each def.columns as column (column.name)}
+	<table>
+		<caption class="visually-hidden">{sortCaption(def, query.sort)}</caption>
+		<thead>
+			<tr>
+				{#each columns as column (column.name)}
 					{#if def.sortable.includes(column.name)}
 						{@const sort = sortState(query.sort, column.name)}
-						<th scope="col" role="columnheader" aria-sort={sort}>
+						<th scope="col" aria-sort={sort}>
 							<a href={listHref(def, query, { sort: nextSort(query.sort, column.name), page: 1 })}>
 								{column.label}
-								<span aria-hidden="true" class="sort-mark">{SORT_MARKS[sort]}</span>
+								{#if sort !== 'none'}
+									<Icon name={sort === 'ascending' ? 'chevron-up' : 'chevron-down'} size={14} />
+								{/if}
 							</a>
 						</th>
 					{:else}
-						<th scope="col" role="columnheader">{column.label}</th>
+						<th scope="col">{column.label}</th>
 					{/if}
 				{/each}
+				{#if hasFlags}<th scope="col">Flags</th>{/if}
 			</tr>
 		</thead>
-		<!-- svelte-ignore a11y_no_redundant_roles -->
-		<tbody role="rowgroup">
+		<tbody>
 			{#each items as item (item.id)}
-				<!-- svelte-ignore a11y_no_redundant_roles -->
-				<tr role="row">
-					{#each def.columns as column (column.name)}
-						<td role="cell" data-label={column.label}>
+				<tr>
+					{#each columns as column (column.name)}
+						<td class:muted={muted(column)}>
 							{#if column.name === linkColumn}
-								<a href="/{def.name}/{item.id}">{cellText(column, item) || 'Untitled'}</a>
+								<a class="title" href="/{def.name}/{item.id}">
+									{cellText(column, item) || 'Untitled'}
+								</a>
+							{:else if column.type === 'tags'}
+								<ul class="chips">
+									{#each tagNames(item) as tag (tag)}<Chip as="li" kind="tag">{tag}</Chip>{/each}
+								</ul>
+							{:else if column.name === 'status' && cellText(column, item)}
+								<Chip status={cellText(column, item)}>{titleCase(cellText(column, item))}</Chip>
 							{:else}
 								{cellText(column, item)}
 							{/if}
 						</td>
 					{/each}
+					{#if hasFlags}
+						<td>
+							<ul class="chips">
+								{#each flagBadges(def, item) as flag (flag.name)}
+									<Chip as="li" flag={flag.name}>{flag.label}</Chip>
+								{/each}
+							</ul>
+						</td>
+					{/if}
 				</tr>
 			{/each}
 		</tbody>
@@ -65,71 +88,80 @@
 <style>
 	.table-wrap {
 		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--surface);
 	}
 	table {
 		width: 100%;
+		min-width: 760px;
 		border-collapse: collapse;
-	}
-	th,
-	td {
-		text-align: left;
-		padding: 0.625rem 0.75rem;
-		border-bottom: 1px solid var(--border);
-		vertical-align: top;
+		font-size: 15px;
 	}
 	th {
-		font-size: 0.8125rem;
+		height: 48px;
+		padding: 0 16px;
+		border-bottom: 1px solid var(--border);
+		background: var(--bg);
 		color: var(--muted);
+		font-size: 13px;
+		font-weight: 600;
+		text-align: left;
 		white-space: nowrap;
 	}
 	th a {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.25rem;
-		min-height: 2.75rem;
+		gap: 4px;
+		min-height: var(--tap);
 		color: inherit;
 		text-decoration: none;
 	}
-	th[aria-sort='ascending'] a,
-	th[aria-sort='descending'] a {
+	th a:hover,
+	th[aria-sort='ascending'],
+	th[aria-sort='descending'] {
 		color: var(--text);
 	}
-	td a {
-		font-weight: 600;
+	td {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--border);
+		vertical-align: middle;
 	}
-
-	@media (max-width: 639px) {
-		thead {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			overflow: hidden;
-			clip-path: inset(50%);
-		}
-		table,
-		tbody,
-		tr,
-		td {
-			display: block;
-		}
-		tr {
-			padding-block: 0.5rem;
-			border-bottom: 1px solid var(--border);
-		}
-		td {
-			display: grid;
-			grid-template-columns: 7rem 1fr;
-			gap: 0.75rem;
-			border: 0;
-			padding: 0.25rem 0;
-		}
-		td::before {
-			content: attr(data-label);
-			color: var(--muted);
-			font-size: 0.8125rem;
-		}
-		td:empty {
-			display: none;
-		}
+	th:first-child,
+	td:first-child {
+		padding-left: 20px;
+	}
+	td:last-child {
+		padding-right: 20px;
+	}
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+	tbody tr:hover {
+		background: var(--hover);
+	}
+	.muted {
+		color: var(--muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.title {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--tap);
+		color: var(--text);
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.title:hover {
+		color: var(--accent);
+		text-decoration: underline;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 </style>

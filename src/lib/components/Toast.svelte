@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		message: string;
 		href?: string;
-		linkText?: string;
+		/** The record the View link opens, read after "View" by screen readers. */
+		linkLabel?: string;
 	}
 
-	let { message, href, linkText = 'View' }: Props = $props();
+	let { message, href, linkLabel }: Props = $props();
 	let visible = $state(true);
 
 	onMount(() => {
@@ -19,36 +21,88 @@
 </script>
 
 <div class="toast" role="status" aria-live="polite" hidden={!visible}>
-	<span>{message}</span>
-	{#if href}<a {href}>{linkText}</a>{/if}
-	<button type="button" aria-label="Dismiss" onclick={() => (visible = false)}>✕</button>
+	<Icon name="check" />
+	<span class="message">{message}</span>
+	{#if href}
+		<a {href}>
+			View{#if linkLabel}<span class="visually-hidden"> {linkLabel}</span>{/if}
+		</a>
+	{/if}
+	<button type="button" aria-label="Dismiss" onclick={() => (visible = false)}>
+		<Icon name="close" />
+	</button>
 </div>
 
 <style>
 	.toast {
 		position: fixed;
 		left: 50%;
-		bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-		transform: translateX(-50%);
+		bottom: calc(32px + env(safe-area-inset-bottom, 0px));
 		z-index: 20;
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 12px;
 		width: max-content;
-		max-width: calc(100vw - 2rem);
-		padding: 0.5rem 0.5rem 0.5rem 1rem;
-		border-radius: 10px;
-		background: var(--text);
-		color: var(--bg);
-		box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+		max-width: calc(100vw - 32px);
+		padding: 6px 6px 6px 18px;
+		border-radius: 14px;
+		background: var(--toast-bg);
+		color: var(--toast-text);
+		box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+		font-size: 15px;
+		font-weight: 500;
+		transform: translateX(-50%);
 	}
-	.toast a {
-		color: inherit;
+	.toast[hidden] {
+		display: none;
+	}
+	a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0 10px;
+		color: var(--toast-link);
 		font-weight: 700;
+		text-decoration: none;
 	}
-	.toast button {
+	a:hover {
+		color: var(--toast-link);
+		text-decoration: underline;
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+	button {
+		width: 44px;
+		height: 44px;
+		padding: 0;
+		border: 0;
+		border-radius: 10px;
 		background: transparent;
-		border-color: transparent;
 		color: inherit;
+	}
+	button:hover {
+		background: transparent;
+		color: inherit;
+		opacity: 0.8;
+	}
+	@media (max-width: 639px) {
+		.toast {
+			left: 16px;
+			right: 16px;
+			bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+			width: auto;
+			gap: 10px;
+			padding: 4px 4px 4px 16px;
+			transform: none;
+		}
+		.message {
+			flex: 1;
+		}
 	}
 </style>

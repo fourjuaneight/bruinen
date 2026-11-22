@@ -290,3 +290,8 @@ main:focus {
 		scroll-behavior: auto !important;
 	}
 }
+
+/* Buttons set their own display, which would otherwise beat the hidden attribute. */
+[hidden] {
+	display: none !important;
+}

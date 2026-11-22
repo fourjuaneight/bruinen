@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import type { CollectionDef } from '../collections.ts';
-	import type { ListQuery } from '../list.ts';
+	import { sortOptions, type ListQuery } from '../list.ts';
+	import Icon from './Icon.svelte';
+	import ScanButton from './ScanButton.svelte';
 
 	interface Props {
 		def: CollectionDef;
@@ -29,33 +31,14 @@
 		timer = setTimeout(() => form?.requestSubmit(), 300);
 	}
 
-	const DATE_LIKE = new Set(['year', 'start', 'end']);
+	/** The field a scanned code belongs in; collections without one get no scan button. */
+	const scanTarget = $derived(def.create.find((f) => f.scan)?.scan);
 
-	const sortOptions = $derived.by(() => {
-		const options = [
-			{
-				value: def.defaultSort,
-				label: def.defaultSort === '-@rowid' ? 'Recently added' : 'Default order'
-			}
-		];
-		for (const field of def.sortable) {
-			const column = def.columns.find((c) => c.name === field);
-			const label = column?.label ?? field;
-			const numeric = column?.type === 'number' || column?.type === 'date';
-			const [up, down] = DATE_LIKE.has(field)
-				? ['oldest first', 'newest first']
-				: numeric
-					? ['low to high', 'high to low']
-					: ['A–Z', 'Z–A'];
-			for (const [value, dir] of [
-				[field, up],
-				[`-${field}`, down]
-			]) {
-				if (value !== def.defaultSort) options.push({ value, label: `${label} (${dir})` });
-			}
-		}
-		return options;
-	});
+	async function searchFor(code: string) {
+		text = code;
+		await tick();
+		form?.requestSubmit();
+	}
 </script>
 
 <form
@@ -67,58 +50,150 @@
 	data-sveltekit-keepfocus
 	data-sveltekit-replacestate
 >
-	<label class="search">
-		<span class="visually-hidden">Search {def.label}</span>
-		<input
-			bind:this={input}
-			bind:value={text}
-			type="search"
-			name="q"
-			placeholder="Search {def.label.toLowerCase()}"
-			oninput={submitSoon}
-		/>
-	</label>
-	<label class="sort" class:headers-sort={view === 'table'}>
-		<span>Sort by</span>
-		<select name="sort" value={query.sort} onchange={() => form?.requestSubmit()}>
-			{#each sortOptions as option (option.value)}
+	<div class="search">
+		<div class="field" class:has-scan={scanTarget}>
+			<label for="q" class="visually-hidden">Search {def.label}</label>
+			<span class="search-icon"><Icon name="search" /></span>
+			<input
+				id="q"
+				bind:this={input}
+				bind:value={text}
+				type="search"
+				name="q"
+				placeholder="Search {def.label.toLowerCase()}"
+				oninput={submitSoon}
+			/>
+			{#if scanTarget}
+				<ScanButton
+					target={scanTarget}
+					label="Scan a barcode to search"
+					class="scan-search"
+					needsCamera
+					ondetect={searchFor}
+				>
+					<Icon name="scan" size={20} />
+				</ScanButton>
+			{/if}
+		</div>
+		<button type="submit" class="submit">Search</button>
+	</div>
+	<div class="sort" class:headers-sort={view === 'table'}>
+		<label for="sort">Sort by</label>
+		<select id="sort" name="sort" value={query.sort} onchange={() => form?.requestSubmit()}>
+			{#each sortOptions(def) as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>
-	</label>
+	</div>
 	{#if query.view}
 		<input type="hidden" name="view" value={query.view} />
 	{/if}
-	<button type="submit">Search</button>
 </form>
 
 <style>
 	.toolbar {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.5rem;
-		align-items: end;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin-bottom: 32px;
+	}
+	:global(main.table-view) .toolbar {
+		margin-bottom: 24px;
 	}
 	.search {
-		grid-column: 1;
+		display: flex;
+		flex: 1 1 320px;
+		gap: 12px;
+	}
+	.field {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+	}
+	.field input {
+		padding-left: 46px;
+	}
+	.has-scan input {
+		padding-right: 52px;
+	}
+	.search-icon {
+		position: absolute;
+		top: 50%;
+		left: 16px;
+		display: flex;
+		color: var(--muted);
+		transform: translateY(-50%);
+		pointer-events: none;
+	}
+	.field :global(.scan-search) {
+		position: absolute;
+		top: 2px;
+		right: 2px;
+		padding: 0;
+		border-color: transparent;
+		background: transparent;
+		color: var(--accent);
+	}
+	.submit {
+		min-height: var(--control);
+		padding: 0 18px;
+		border-radius: 12px;
+		font-size: 15px;
 	}
 	.sort {
-		grid-column: 1 / -1;
-		display: grid;
-		gap: 0.25rem;
-		font-size: 0.875rem;
+		position: relative;
+		display: flex;
+		flex: 0 0 280px;
+		align-items: center;
+	}
+	.sort label {
+		position: absolute;
+		left: 16px;
 		color: var(--muted);
+		font-size: 13px;
+		font-weight: 600;
+		pointer-events: none;
 	}
 	.sort select {
-		color: var(--text);
+		padding-left: 76px;
 	}
-	button {
-		grid-row: 1;
-		grid-column: 2;
-	}
+
 	@media (min-width: 640px) {
+		/* Scanning to search is a phone feature. */
+		.field :global(.scan-search) {
+			display: none;
+		}
+		.has-scan input {
+			padding-right: 14px;
+		}
 		.sort.headers-sort {
 			display: none;
+		}
+	}
+	@media (max-width: 639px) {
+		.toolbar {
+			flex-direction: column;
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+		.search {
+			flex: none;
+			gap: 10px;
+		}
+		.field input {
+			padding-left: 42px;
+		}
+		.search-icon {
+			left: 14px;
+		}
+		.sort {
+			flex: none;
+		}
+		.sort label {
+			left: 14px;
+		}
+		.sort select {
+			padding-left: 74px;
 		}
 	}
 </style>

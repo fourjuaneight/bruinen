@@ -5,23 +5,24 @@ test.beforeEach(async ({ page }) => login(page));
 test('movies show cover cards, with a placeholder for a broken cover', async ({ page }) => {
 	// Title order puts Movie 03 (cover 404s) and Movie 04 (cover loads) on the first page.
 	await page.goto('/movies?view=cards&sort=title');
-	await expect(page.getByRole('img', { name: 'Movie 04' })).toBeVisible();
+	await expect(page.getByRole('link', { name: /Movie 04/ }).locator('img')).toBeVisible();
 	const broken = page.getByRole('listitem').filter({ hasText: 'Movie 03' });
 	await expect(broken.getByTestId('cover-placeholder')).toBeVisible();
 });
 
-test('the view toggle switches to the table', async ({ page }) => {
+test('the view toggle switches to the table', async ({ page, isMobile }) => {
 	await page.goto('/movies?view=cards');
 	await page.getByRole('link', { name: 'Table' }).click();
 	await expect(page).toHaveURL(/view=table/);
-	await expect(page.getByRole('table')).toBeVisible();
+	// Phones get the same view as a stacked list instead of a table.
+	if (!isMobile) await expect(page.getByRole('table')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Table' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('collections without covers have no cards toggle', async ({ page }) => {
+test('collections without covers have no cards toggle', async ({ page, isMobile }) => {
 	await page.goto('/articles');
 	await expect(page.getByRole('link', { name: 'Cards' })).toHaveCount(0);
-	await expect(page.getByRole('table')).toBeVisible();
+	if (!isMobile) await expect(page.getByRole('table')).toBeVisible();
 });
 
 test('a card opens the record with meta names', async ({ page }) => {
@@ -36,7 +37,12 @@ test('a card opens the record with meta names', async ({ page }) => {
 
 test('cover collections default to cards', async ({ page }) => {
 	await page.goto('/games');
-	await expect(page.getByRole('img', { name: 'Hollow Knight' })).toBeVisible();
+	await expect(
+		page
+			.getByRole('link', { name: /Hollow Knight/ })
+			.first()
+			.locator('img')
+	).toBeVisible();
 	await expect(page.getByRole('link', { name: /Hollow Knight/ })).toContainText('PC');
 	await expect(page.getByRole('table')).toHaveCount(0);
 });

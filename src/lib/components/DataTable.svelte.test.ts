@@ -44,4 +44,39 @@ describe('DataTable', () => {
 			.element(page.getByRole('link', { name: 'Blade Runner' }))
 			.toHaveAttribute('href', '/movies/m1');
 	});
+
+	it('names the sort in its caption', async () => {
+		render(DataTable, { def: movies, items, query: { q: '', sort: '-year', page: 1, view: null } });
+		await expect
+			.element(page.getByRole('table', { name: 'Movies, sorted by year, newest first' }))
+			.toBeInTheDocument();
+	});
+
+	it('merges the flags into one column of badges, instead of Yes', async () => {
+		const articles = getCollection('articles') as CollectionDef;
+		render(DataTable, {
+			def: articles,
+			items: [{ id: 'a1', title: 'Worse Is Better', favorite: true, dead: true }],
+			query: { q: '', sort: '-@rowid', page: 1, view: null }
+		});
+		await expect.element(page.getByRole('columnheader', { name: 'Flags' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('columnheader', { name: 'Favorite' }))
+			.not.toBeInTheDocument();
+		await expect
+			.element(page.getByRole('cell', { name: 'Favorite Dead link' }))
+			.toBeInTheDocument();
+		await expect.element(page.getByText('Yes')).not.toBeInTheDocument();
+	});
+
+	it('shows tags as separate chips', async () => {
+		const articles = getCollection('articles') as CollectionDef;
+		render(DataTable, {
+			def: articles,
+			items: [{ id: 'a2', title: 'T', expand: { tags: [{ name: 'web' }, { name: 'history' }] } }],
+			query: { q: '', sort: '-@rowid', page: 1, view: null }
+		});
+		const cell = page.getByRole('cell', { name: 'web history' });
+		await expect.element(cell.getByRole('listitem')).toHaveLength(2);
+	});
 });

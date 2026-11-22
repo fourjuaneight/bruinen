@@ -8,16 +8,23 @@ const PNG =
 
 describe('Cover', () => {
 	it('fetches an eager cover (the record page) at high priority', async () => {
-		render(Cover, { src: PNG, alt: 'Dune', aspect: '2 / 3', eager: true });
+		render(Cover, { src: PNG, title: 'Dune', alt: 'Dune', aspect: '2 / 3', eager: true });
 		const img = page.getByRole('img', { name: 'Dune' });
 		await expect.element(img).toHaveAttribute('fetchpriority', 'high');
 		await expect.element(img).toHaveAttribute('loading', 'eager');
 	});
 
 	it('lazy-loads card covers at the default priority', async () => {
-		render(Cover, { src: PNG, alt: 'Dune', aspect: '2 / 3' });
+		render(Cover, { src: PNG, title: 'Dune', alt: 'Dune', aspect: '2 / 3' });
 		const img = page.getByRole('img', { name: 'Dune' });
 		await expect.element(img).toHaveAttribute('loading', 'lazy');
 		await expect.element(img).not.toHaveAttribute('fetchpriority');
+	});
+
+	it('shows the first letter of the title when there is no cover, hidden from screen readers', async () => {
+		const { container } = await render(Cover, { src: '', title: 'dune', alt: '', aspect: '2 / 3' });
+		const placeholder = container.querySelector('[data-testid="cover-placeholder"]');
+		expect(placeholder?.textContent?.trim()).toBe('D');
+		expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
 	});
 });

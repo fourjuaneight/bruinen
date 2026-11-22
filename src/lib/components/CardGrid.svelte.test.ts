@@ -11,6 +11,7 @@ const PNG =
 
 const shows = getCollection('shows') as CollectionDef;
 const games = getCollection('games') as CollectionDef;
+const books = getCollection('books') as CollectionDef;
 
 describe('CardGrid', () => {
 	it('shows the season on show cards', async () => {
@@ -39,19 +40,44 @@ describe('CardGrid', () => {
 		await expect.element(card.getByText('PC', { exact: true })).toBeInTheDocument();
 	});
 
-	it('renders lazy covers with the record title as alt text and the right shape', async () => {
-		render(CardGrid, { def: mtg, items: [{ id: 'c1', name: 'Black Lotus', image: PNG }] });
-		const img = page.getByRole('img', { name: 'Black Lotus' });
-		await expect.element(img).toHaveAttribute('loading', 'lazy');
+	it('renders lazy, decorative covers in the right shape, since the title names the link', async () => {
+		const { container } = await render(CardGrid, {
+			def: mtg,
+			items: [{ id: 'c1', name: 'Black Lotus', image: PNG }]
+		});
+		const img = container.querySelector('img');
+		expect(img?.getAttribute('alt')).toBe('');
+		expect(img?.getAttribute('loading')).toBe('lazy');
 		await expect
 			.element(page.getByTestId('cover-frame'))
 			.toHaveAttribute('style', expect.stringContaining('aspect-ratio: 63 / 88'));
 	});
 
+	it('shows the creator and year, the status chip and a heart for favorites', async () => {
+		render(CardGrid, {
+			def: books,
+			items: [
+				{
+					id: 'b1',
+					title: 'Dune',
+					author: 'Frank Herbert',
+					year: 1965,
+					favorite: true,
+					cover: PNG,
+					expand: { status: { name: 'in_progress' } }
+				}
+			]
+		});
+		const card = page.getByRole('link', { name: /Dune/ });
+		await expect.element(card.getByText('Frank Herbert · 1965')).toBeInTheDocument();
+		await expect.element(card.getByText('In Progress')).toBeInTheDocument();
+		await expect.element(card.getByText('Favorite')).toBeInTheDocument();
+	});
+
 	it('shows a placeholder when there is no cover', async () => {
 		render(CardGrid, { def: movies, items: [{ id: 'm1', title: 'No Cover', cover: '' }] });
 		await expect.element(page.getByTestId('cover-placeholder')).toBeInTheDocument();
-		await expect.element(page.getByRole('img', { name: 'No Cover' })).not.toBeInTheDocument();
+		await expect.element(page.getByRole('img')).not.toBeInTheDocument();
 	});
 
 	it('swaps in the placeholder when the cover fails to load', async () => {

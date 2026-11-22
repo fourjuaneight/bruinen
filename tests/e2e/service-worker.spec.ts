@@ -20,6 +20,6 @@ test('cover images are cached after they load', async ({ page }) => {
 	await page.evaluate(() => navigator.serviceWorker.ready);
 	await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
 	await page.goto('/movies?view=cards&sort=title');
-	await expect(page.getByRole('img', { name: 'Movie 04' })).toBeVisible();
+	await expect(page.getByRole('link', { name: /Movie 04/ }).locator('img')).toBeVisible();
 	await expect.poll(() => cachedUrls(page, 'bruinen-images')).toContain(COVER_OK);
 });

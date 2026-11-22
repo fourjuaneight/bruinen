@@ -87,13 +87,13 @@ test('says so when Rivendell is unreachable', async ({ page }) => {
 	await expect(page.getByRole('heading', { name: 'Rivendell is unreachable' })).toBeVisible();
 });
 
-test('table rows stack with labels on phones', async ({ page, isMobile }) => {
+test('the table becomes a stacked list of links on phones', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'phone layout only');
-	await page.goto('/movies?view=table');
-	const firstCell = page.locator('tbody tr').first().locator('td').nth(1);
-	await expect(firstCell).toHaveAttribute('data-label', 'Director');
-	const before = await firstCell.evaluate((el) => getComputedStyle(el, '::before').content);
-	expect(before).toContain('Director');
+	await page.goto('/movies?view=table&sort=-title');
+	await expect(page.getByRole('table')).toBeHidden();
+	const row = page.getByRole('link', { name: /O'Brien/ });
+	await expect(row).toBeVisible();
+	await expect(row).toHaveAttribute('href', /^\/movies\/\w+$/);
 });
 
 test('the sidebar groups the collections and marks the current one', async ({ page, isMobile }) => {

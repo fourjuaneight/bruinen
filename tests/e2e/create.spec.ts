@@ -4,8 +4,8 @@ test.beforeEach(async ({ page }) => login(page));
 
 test('creates a book with meta names and links to it', async ({ page }) => {
 	await page.goto('/books');
-	await page.getByRole('button', { name: 'New Books' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New Books' });
+	await page.getByRole('button', { name: 'Add book' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add book' });
 	await dialog.getByLabel('Title').fill('The Left Hand of Darkness');
 	await dialog.getByLabel('Author').fill('Ursula K. Le Guin');
 	await dialog.getByLabel('Genre').selectOption('rock');
@@ -15,7 +15,7 @@ test('creates a book with meta names and links to it', async ({ page }) => {
 	await expect(dialog).toBeHidden();
 	const toast = page.getByRole('status').filter({ hasText: 'Added' });
 	await expect(toast).toContainText('The Left Hand of Darkness');
-	await toast.getByRole('link', { name: 'View' }).click();
+	await toast.getByRole('link', { name: 'View The Left Hand of Darkness' }).click();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Left Hand of Darkness');
 	await expect(page.getByText('Rock', { exact: true })).toBeVisible();
 	await expect(page.getByText('In Progress', { exact: true })).toBeVisible();
@@ -23,8 +23,8 @@ test('creates a book with meta names and links to it', async ({ page }) => {
 
 test('shows field errors and keeps the dialog open', async ({ page }) => {
 	await page.goto('/books');
-	await page.getByRole('button', { name: 'New Books' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New Books' });
+	await page.getByRole('button', { name: 'Add book' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add book' });
 	await dialog.getByLabel('Title').fill('Only a title');
 	await dialog.getByRole('button', { name: 'Save' }).click();
 	await expect(dialog.getByLabel('Author')).toHaveAttribute('aria-invalid', 'true');
@@ -35,8 +35,8 @@ test('shows field errors and keeps the dialog open', async ({ page }) => {
 
 test('reports a record saved without enrichment', async ({ page }) => {
 	await page.goto('/movies?view=table');
-	await page.getByRole('button', { name: 'New Movies' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New Movies' });
+	await page.getByRole('button', { name: 'Add movie' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add movie' });
 	await dialog.getByLabel('Title').fill('ENRICHFAIL test');
 	await dialog.getByRole('button', { name: 'Save' }).click();
 	await expect(page.getByRole('status')).toContainText(
@@ -46,8 +46,8 @@ test('reports a record saved without enrichment', async ({ page }) => {
 
 test('shows a uniqueness error on the field', async ({ page }) => {
 	await page.goto('/github');
-	await page.getByRole('button', { name: 'New GitHub' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New GitHub' });
+	await page.getByRole('button', { name: 'Add repo' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add repo' });
 	await dialog.getByLabel('Repository URL').fill('https://github.com/pocketbase/pocketbase');
 	await dialog.getByRole('button', { name: 'Save' }).click();
 	await expect(dialog.getByText('Value must be unique.')).toBeVisible();
@@ -57,8 +57,8 @@ test('shows a uniqueness error on the field', async ({ page }) => {
 test('a slow create shows the archiving state', async ({ page }) => {
 	await mock('delay', { ms: 1500 });
 	await page.goto('/articles');
-	await page.getByRole('button', { name: 'New Articles' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New Articles' });
+	await page.getByRole('button', { name: 'Add article' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add article' });
 	await dialog.getByLabel('Title').fill('Slow one');
 	await dialog.getByLabel('Creator').fill('Someone');
 	await dialog.getByLabel('URL').fill('https://example.com/slow');
@@ -72,19 +72,19 @@ test('a slow create shows the archiving state', async ({ page }) => {
 
 test('Esc closes the dialog and returns focus to the opener', async ({ page }) => {
 	await page.goto('/movies');
-	const opener = page.getByRole('button', { name: 'New Movies' });
+	const opener = page.getByRole('button', { name: 'Add movie' });
 	await opener.click();
-	await expect(page.getByRole('dialog', { name: 'New Movies' })).toBeVisible();
+	await expect(page.getByRole('dialog', { name: 'Add movie' })).toBeVisible();
 	await page.keyboard.press('Escape');
-	await expect(page.getByRole('dialog', { name: 'New Movies' })).toBeHidden();
+	await expect(page.getByRole('dialog', { name: 'Add movie' })).toBeHidden();
 	await expect(opener).toBeFocused();
 });
 
 test('clicking outside the dialog closes it', async ({ page }) => {
 	await page.goto('/movies');
-	const opener = page.getByRole('button', { name: 'New Movies' });
+	const opener = page.getByRole('button', { name: 'Add movie' });
 	await opener.click();
-	const dialog = page.getByRole('dialog', { name: 'New Movies' });
+	const dialog = page.getByRole('dialog', { name: 'Add movie' });
 	await expect(dialog).toBeVisible();
 
 	// A click inside leaves it open.
@@ -106,8 +106,8 @@ test('clicking outside the dialog closes it', async ({ page }) => {
 
 test('Cancel closes the dialog', async ({ page }) => {
 	await page.goto('/movies');
-	await page.getByRole('button', { name: 'New Movies' }).click();
-	const dialog = page.getByRole('dialog', { name: 'New Movies' });
+	await page.getByRole('button', { name: 'Add movie' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Add movie' });
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(dialog).toBeHidden();
 });
@@ -117,8 +117,8 @@ test.describe('without JavaScript', () => {
 
 	test('the New button opens the dialog, and errors come back in it', async ({ page }) => {
 		await page.goto('/books');
-		await page.getByRole('button', { name: 'New Books' }).click();
-		const dialog = page.getByRole('dialog', { name: 'New Books' });
+		await page.getByRole('button', { name: 'Add book' }).click();
+		const dialog = page.getByRole('dialog', { name: 'Add book' });
 		await expect(dialog).toBeVisible();
 		await dialog.getByLabel('Title').fill('Only a title');
 		await dialog.getByRole('button', { name: 'Save' }).click();

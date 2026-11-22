@@ -82,7 +82,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 			test('open create dialog with errors', async ({ page }) => {
 				await page.goto('/articles');
-				await page.getByRole('button', { name: 'New Articles' }).click();
+				await page.getByRole('button', { name: 'Add article' }).click();
 				await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
 				await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
 				await noViolations(page);
@@ -118,7 +118,7 @@ test('controls are at least 44px on a phone', async ({ page }) => {
 		expect(await smallTargets(page), path).toEqual([]);
 	}
 	await page.goto('/books');
-	await page.getByRole('button', { name: 'New Books' }).click();
+	await page.getByRole('button', { name: 'Add book' }).click();
 	expect(await smallTargets(page), 'create dialog').toEqual([]);
 	await page.goto('/books?view=table');
 	await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FieldDef } from '../collections.ts';
-	import BarcodeScanner from './BarcodeScanner.svelte';
+	import Icon from './Icon.svelte';
+	import ScanButton from './ScanButton.svelte';
 
 	interface Props {
 		field: FieldDef;
@@ -11,15 +12,7 @@
 
 	let { field, options = [], value, error }: Props = $props();
 
-	let scanDialog: HTMLDialogElement | undefined = $state();
-	let scanButton: HTMLButtonElement | undefined = $state();
-	let scanning = $state(false);
 	let scanned: string | undefined = $state();
-
-	function openScanner() {
-		scanning = true;
-		scanDialog?.showModal();
-	}
 
 	const id = $derived(`field-${field.name}`);
 	const errorId = $derived(`${id}-error`);
@@ -106,38 +99,16 @@
 				/>
 			{/if}
 			{#if field.scan}
-				<button
-					type="button"
-					bind:this={scanButton}
-					aria-label="Scan {field.label}"
-					onclick={openScanner}
+				<ScanButton
+					target={field.scan}
+					label="Scan {field.label}"
+					class="scan"
+					ondetect={(code) => (scanned = code)}
 				>
-					Scan
-				</button>
+					<Icon name="scan" size={20} />Scan
+				</ScanButton>
 			{/if}
 		</div>
-		{#if field.scan}
-			<dialog
-				bind:this={scanDialog}
-				aria-label="Scan {field.label}"
-				class="scan-dialog"
-				onclose={() => {
-					scanning = false;
-					scanButton?.focus();
-				}}
-			>
-				{#if scanning}
-					<BarcodeScanner
-						target={field.scan}
-						ondetect={(code) => {
-							scanned = code;
-							scanDialog?.close();
-						}}
-						onclose={() => scanDialog?.close()}
-					/>
-				{/if}
-			</dialog>
-		{/if}
 		{#if field.type === 'tags'}
 			<p id="{id}-hint" class="hint">Up to 5. Hold Ctrl or ⌘ to pick several on a computer.</p>
 		{/if}
@@ -178,14 +149,6 @@
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--muted);
-	}
-	.scan-dialog {
-		width: min(32rem, 100vw - 2rem);
-		padding: 1rem;
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		background: var(--surface);
-		color: var(--text);
 	}
 	.field-error {
 		margin: 0;
