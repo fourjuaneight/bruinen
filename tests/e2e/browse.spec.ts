@@ -117,3 +117,12 @@ test('the skip link moves focus into the main area', async ({ page, isMobile }) 
 	await page.keyboard.press('Enter');
 	await expect(page.locator('main#content')).toBeFocused();
 });
+
+test('phone pages never scroll sideways', async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	for (const path of ['/', '/articles?view=table', '/books?view=cards', '/meta']) {
+		await page.goto(path);
+		const width = await page.evaluate(() => document.documentElement.scrollWidth);
+		expect(width, path).toBeLessThanOrEqual(390);
+	}
+});

@@ -194,9 +194,17 @@
 
 	/* Below 1024px the same nav is one scrolling row of pills. */
 	@media (max-width: 1023px) {
+		/* Keep the pill row at its own height; wrapped flex lines would share the min-height. */
+		.shell {
+			align-content: flex-start;
+		}
 		.collections {
 			display: flex;
 			flex-basis: 100%;
+			/* A flex item is as wide as its content by default; the row must scroll instead. */
+			min-width: 0;
+			/* Contains the visually hidden group labels, which would otherwise widen the page. */
+			position: relative;
 			gap: 8px;
 			padding: 10px 16px;
 			overflow-x: auto;
