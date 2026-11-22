@@ -24,7 +24,7 @@
 	const icon = $derived(flag === 'favorite' ? 'heart' : flag === 'dead' ? 'dead-link' : undefined);
 </script>
 
-<svelte:element this={as} class="chip {tone} {size}">
+<svelte:element this={as} class="chip {tone ?? ''} {size}">
 	{#if status !== undefined}<span class="dot"></span>{/if}
 	{#if icon}<span class="icon" class:fav={icon === 'heart'}>
 			<Icon name={icon} size={13} />

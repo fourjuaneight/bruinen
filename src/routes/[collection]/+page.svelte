@@ -7,6 +7,7 @@
 	import RecordList from '#lib/components/RecordList.svelte';
 	import Toast from '#lib/components/Toast.svelte';
 	import Toolbar from '#lib/components/Toolbar.svelte';
+	import { formatCount } from '#lib/format.ts';
 	import { listHref } from '#lib/list.ts';
 	import type { PageProps } from './$types';
 
@@ -41,7 +42,7 @@
 		<div class="title">
 			<h1>{data.def.label}</h1>
 			<p class="count">
-				{data.totalItems.toLocaleString('en-US')}
+				{formatCount(data.totalItems)}
 				{data.totalItems === 1 ? 'record' : 'records'}
 			</p>
 		</div>

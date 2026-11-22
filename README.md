@@ -3,7 +3,7 @@
 A mobile-first web app for browsing, searching and adding records to [Rivendell](../rivendell), the PocketBase-backed media catalog. It runs on the tailnet only, at `https://bruinen.<your-tailnet>.ts.net`, next to Rivendell.
 
 - Browse every Rivendell collection as a table, or as cover cards for movies, shows, games, books, CDs, vinyls and MTG.
-- Search and sort, with all list state in the URL.
+- Search and sort, with all list state in the URL. On a phone, scan a barcode or ISBN to search for it.
 - Add records through Rivendell's create API, including barcode/ISBN scanning with the phone camera.
 - Edit a record from its page, with the same form plus its favorite/dead/shared flags.
 - Sign in with a Rivendell **superuser** account. The session lives in an httpOnly cookie, and the browser never talks to PocketBase directly.
@@ -14,7 +14,9 @@ Edits are plain PocketBase updates: Rivendell has no update hook, so saving neve
 
 ## Stack
 
-SvelteKit 3 (Svelte 5, `adapter-node`) on Node 24, the `pocketbase` JS SDK on the server, plain CSS, and `barcode-detector` (native `BarcodeDetector` where available, otherwise a self-hosted zxing WASM build for iOS Safari).
+SvelteKit 3 (Svelte 5, `adapter-node`) on Node 24, the `pocketbase` JS SDK on the server, plain CSS, and `barcode-detector` (native `BarcodeDetector` where available, otherwise a self-hosted zxing WASM build for iOS Safari). Inter and Space Grotesk are self-hosted from `src/lib/assets/fonts`, so nothing loads from outside the tailnet.
+
+The design (tokens, components, layouts and accessibility rules) is specified in `docs/superpowers/specs/2026-11-21-redesign.md`.
 
 ## Develop
 

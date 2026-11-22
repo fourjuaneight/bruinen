@@ -31,6 +31,8 @@
 		timer = setTimeout(() => form?.requestSubmit(), 300);
 	}
 
+	const options = $derived(sortOptions(def));
+
 	/** The field a scanned code belongs in; collections without one get no scan button. */
 	const scanTarget = $derived(def.create.find((f) => f.scan)?.scan);
 
@@ -80,7 +82,7 @@
 	<div class="sort" class:headers-sort={view === 'table'}>
 		<label for="sort">Sort by</label>
 		<select id="sort" name="sort" value={query.sort} onchange={() => form?.requestSubmit()}>
-			{#each sortOptions(def) as option (option.value)}
+			{#each options as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}
 		</select>

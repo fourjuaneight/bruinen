@@ -1,22 +1,16 @@
 <script lang="ts">
-	import { COLLECTIONS } from '#lib/collections.ts';
+	import { COLLECTIONS, NAV_GROUPS } from '#lib/collections.ts';
+	import { formatCount } from '#lib/format.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-
-	const GROUPS = [
-		{ id: 'physical', label: 'Physical' },
-		{ id: 'digital', label: 'Digital' },
-		{ id: 'vocabulary', label: 'Vocabulary' }
-	] as const;
-	const count = new Intl.NumberFormat('en-US');
 </script>
 
 <svelte:head><title>Bruinen</title></svelte:head>
 
 <main id="content" tabindex="-1">
 	<h1>Collections</h1>
-	{#each GROUPS as group (group.id)}
+	{#each NAV_GROUPS as group (group.id)}
 		<section aria-labelledby="home-{group.id}">
 			<h2 id="home-{group.id}">{group.label}</h2>
 			<ul class="grid">
@@ -25,7 +19,7 @@
 						<a href="/{def.name}">
 							<span class="label">{def.label}</span>
 							{#if data.counts[def.name] !== undefined}
-								<span class="count">{count.format(data.counts[def.name])}</span>
+								<span class="count">{formatCount(data.counts[def.name])}</span>
 							{/if}
 						</a>
 					</li>

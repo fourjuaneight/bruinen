@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCollection, type CollectionDef, type FieldDef } from './collections.ts';
-import { cellText, flagBadges, recordSections, statusTone } from './format.ts';
+import { cellText, flagBadges, recordSections, statusTone, tagNames } from './format.ts';
 
 const f = (type: FieldDef['type'], name = 'x'): FieldDef => ({ name, label: name, type });
 
@@ -174,5 +174,14 @@ describe('flagBadges', () => {
 	it('shows nothing for false flags or collections without them', () => {
 		expect(flagBadges(articles, { favorite: false })).toEqual([]);
 		expect(flagBadges(getCollection('cds') as CollectionDef, { favorite: true })).toEqual([]);
+	});
+});
+
+describe('tagNames', () => {
+	it('lists the expanded tag names, skipping rows without one', () => {
+		expect(
+			tagNames({ expand: { tags: [{ name: 'web' }, { id: 'x' }, { name: 'history' }] } })
+		).toEqual(['web', 'history']);
+		expect(tagNames({})).toEqual([]);
 	});
 });

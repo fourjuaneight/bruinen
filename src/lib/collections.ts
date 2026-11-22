@@ -22,6 +22,13 @@ export interface FieldDef {
 
 export type NavGroup = 'physical' | 'digital' | 'vocabulary';
 
+/** The navigation groups, in display order. */
+export const NAV_GROUPS: readonly { id: NavGroup; label: string }[] = [
+	{ id: 'physical', label: 'Physical' },
+	{ id: 'digital', label: 'Digital' },
+	{ id: 'vocabulary', label: 'Vocabulary' }
+];
+
 export interface CollectionDef {
 	name: string;
 	label: string;

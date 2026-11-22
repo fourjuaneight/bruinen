@@ -7,6 +7,15 @@ export type Item = Record<string, unknown> & { expand?: Record<string, unknown> 
 export const nameOf = (value: unknown) =>
 	value && typeof value === 'object' && 'name' in value ? String(value.name) : '';
 
+/** The names of a record's expanded tags. */
+export function tagNames(item: Item): string[] {
+	const tags = item.expand?.tags;
+	return Array.isArray(tags) ? tags.map(nameOf).filter(Boolean) : [];
+}
+
+/** Record counts as "1,284". */
+export const formatCount = (n: number) => n.toLocaleString('en-US');
+
 /** A field the collection shows or creates, by name. */
 const knownField = (def: CollectionDef, name: string) =>
 	def.columns.find((f) => f.name === name) ?? def.create.find((f) => f.name === name);

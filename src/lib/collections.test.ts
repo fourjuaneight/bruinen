@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import schema from '../../tests/fixtures/rivendell-schema.json' with { type: 'json' };
-import { COLLECTIONS, getCollection } from './collections.ts';
+import { COLLECTIONS, getCollection, NAV_GROUPS } from './collections.ts';
 
 type SchemaField = { name: string; type: string; required: boolean };
 const fixture = schema as Record<string, SchemaField[]>;
@@ -67,6 +67,14 @@ describe('collection registry', () => {
 					['physical', 'digital', 'vocabulary'].indexOf(b)
 			)
 		);
+	});
+
+	it('labels every navigation group once, in display order', () => {
+		expect(NAV_GROUPS).toEqual([
+			{ id: 'physical', label: 'Physical' },
+			{ id: 'digital', label: 'Digital' },
+			{ id: 'vocabulary', label: 'Vocabulary' }
+		]);
 	});
 
 	it('searches the scannable field, so a scanned code finds its record', () => {

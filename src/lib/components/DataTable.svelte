@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionDef, FieldDef } from '../collections.ts';
-	import { cellText, flagBadges, nameOf, titleCase } from '../format.ts';
+	import { cellText, flagBadges, tagNames, titleCase } from '../format.ts';
 	import { listHref, nextSort, sortCaption, sortState, type ListQuery } from '../list.ts';
 	import Chip from './Chip.svelte';
 	import Icon from './Icon.svelte';
@@ -21,10 +21,6 @@
 	const hasFlags = $derived(def.edit.some((f) => f.type === 'bool'));
 	const muted = (column: FieldDef) =>
 		column.name !== linkColumn && ['text', 'number', 'date'].includes(column.type);
-	const tagNames = (item: Record<string, unknown>) => {
-		const tags = (item.expand as Record<string, unknown> | undefined)?.tags;
-		return Array.isArray(tags) ? tags.map(nameOf).filter(Boolean) : [];
-	};
 </script>
 
 <div class="table-wrap">
@@ -54,19 +50,18 @@
 			{#each items as item (item.id)}
 				<tr>
 					{#each columns as column (column.name)}
+						{@const text = cellText(column, item)}
 						<td class:muted={muted(column)}>
 							{#if column.name === linkColumn}
-								<a class="title" href="/{def.name}/{item.id}">
-									{cellText(column, item) || 'Untitled'}
-								</a>
+								<a class="title" href="/{def.name}/{item.id}">{text || 'Untitled'}</a>
 							{:else if column.type === 'tags'}
 								<ul class="chips">
 									{#each tagNames(item) as tag (tag)}<Chip as="li" kind="tag">{tag}</Chip>{/each}
 								</ul>
-							{:else if column.name === 'status' && cellText(column, item)}
-								<Chip status={cellText(column, item)}>{titleCase(cellText(column, item))}</Chip>
+							{:else if column.name === 'status' && text}
+								<Chip status={text}>{titleCase(text)}</Chip>
 							{:else}
-								{cellText(column, item)}
+								{text}
 							{/if}
 						</td>
 					{/each}

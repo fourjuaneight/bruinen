@@ -3,20 +3,14 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
-	import { COLLECTIONS, type NavGroup } from '#lib/collections.ts';
+	import { COLLECTIONS, NAV_GROUPS } from '#lib/collections.ts';
 	import Icon from '#lib/components/Icon.svelte';
+	import { formatCount } from '#lib/format.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 
-	const GROUPS: { id: NavGroup; label: string }[] = [
-		{ id: 'physical', label: 'Physical' },
-		{ id: 'digital', label: 'Digital' },
-		{ id: 'vocabulary', label: 'Vocabulary' }
-	];
-
 	const current = $derived(page.url.pathname.split('/')[1] ?? '');
-	const count = new Intl.NumberFormat('en-US');
 
 	let nav: HTMLElement | undefined = $state();
 
@@ -47,7 +41,7 @@
 	</header>
 	<div class="shell">
 		<nav aria-label="Collections" class="collections" bind:this={nav}>
-			{#each GROUPS as group (group.id)}
+			{#each NAV_GROUPS as group (group.id)}
 				<div class="group">
 					<p id="grp-{group.id}" class="group-label">{group.label}</p>
 					<ul aria-labelledby="grp-{group.id}">
@@ -56,7 +50,7 @@
 								<a href="/{def.name}" aria-current={current === def.name ? 'page' : undefined}>
 									<span>{def.label}</span>
 									{#if data.counts[def.name] !== undefined}
-										<span class="count">{count.format(data.counts[def.name])}</span>
+										<span class="count">{formatCount(data.counts[def.name])}</span>
 									{/if}
 								</a>
 							</li>

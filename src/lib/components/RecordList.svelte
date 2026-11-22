@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionDef } from '../collections.ts';
-	import { cellText, flagBadges, nameOf } from '../format.ts';
+	import { cellText, flagBadges, tagNames } from '../format.ts';
 	import Chip from './Chip.svelte';
 	import Icon from './Icon.svelte';
 
@@ -26,10 +26,6 @@
 			.filter(Boolean)
 			.slice(0, 2)
 			.join(' · ');
-	const tagNames = (item: Record<string, unknown>) => {
-		const tags = (item.expand as Record<string, unknown> | undefined)?.tags;
-		return Array.isArray(tags) ? tags.map(nameOf).filter(Boolean) : [];
-	};
 </script>
 
 <!-- The phone version of the table: one link row per record, no label/value blocks. -->
