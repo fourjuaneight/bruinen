@@ -58,6 +58,8 @@ test('sorts by clicking a column header', async ({ page, isMobile }) => {
 test('sorts with the select on phones', async ({ page, isMobile }) => {
 	test.skip(!isMobile, 'phone layout only');
 	await page.goto('/movies?view=table');
+	// Auto-submit needs the page hydrated; before that only the Search button submits the sort.
+	await page.waitForLoadState('networkidle');
 	await page.getByLabel('Sort by').selectOption({ label: 'Year (newest first)' });
 	await expect(page).toHaveURL(/sort=-year/);
 	await expect(page.locator('tbody tr').first()).toContainText('2015');

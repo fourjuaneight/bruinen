@@ -113,6 +113,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
+		min-width: var(--tap);
 		min-height: var(--tap);
 		color: inherit;
 		text-decoration: none;
@@ -147,6 +148,7 @@
 	.title {
 		display: inline-flex;
 		align-items: center;
+		min-width: var(--tap);
 		min-height: var(--tap);
 		color: var(--text);
 		font-weight: 600;

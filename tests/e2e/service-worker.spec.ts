@@ -13,6 +13,8 @@ test('the service worker precaches the app shell', async ({ page }) => {
 	expect(urls.some((u) => u.endsWith('.css'))).toBe(true);
 	// The barcode scanner's zxing build, so scanning doesn't wait on a multi-MB download.
 	expect(urls.some((u) => u.endsWith('.wasm'))).toBe(true);
+	// The self-hosted fonts, so the app looks the same offline.
+	expect(urls.filter((u) => u.endsWith('.woff2'))).toHaveLength(2);
 });
 
 test('cover images are cached after they load', async ({ page }) => {

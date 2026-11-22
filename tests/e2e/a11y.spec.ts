@@ -19,8 +19,7 @@ async function noViolations(page: Page) {
  */
 async function smallTargets(page: Page) {
 	return page.evaluate(() => {
-		const selector =
-			'button, input:not([type=hidden]), select, textarea, nav a, a.button, .cards a, main > ul a';
+		const selector = 'button, input:not([type=hidden]), select, textarea, a:not(p a)';
 		const target = (el: HTMLElement) =>
 			el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'file')
 				? (el.labels?.[0] ?? el)
