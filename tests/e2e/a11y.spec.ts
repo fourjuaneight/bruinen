@@ -127,3 +127,17 @@ test('controls are at least 44px on a phone', async ({ page }) => {
 	await page.getByRole('button', { name: 'Edit' }).click();
 	expect(await smallTargets(page), 'edit dialog').toEqual([]);
 });
+
+test('controls are at least 44px on a tablet, between the phone and sidebar layouts', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 768, height: 1024 });
+	await login(page);
+	for (const path of ['/', '/movies?view=table', '/movies?view=cards', '/articles']) {
+		await page.goto(path);
+		expect(await smallTargets(page), path).toEqual([]);
+	}
+	await page.goto('/books?view=table');
+	await page.getByRole('link', { name: 'Nineteen Eighty-Four' }).click();
+	expect(await smallTargets(page), 'record detail').toEqual([]);
+});

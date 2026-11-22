@@ -59,17 +59,29 @@
 <style>
 	.fields {
 		display: grid;
-		gap: 1rem;
-		margin-bottom: 1.25rem;
+		gap: 18px;
+		margin-bottom: 20px;
 	}
 	.hint {
-		margin: 0 0 1rem;
-		font-size: 0.875rem;
+		margin: 0 0 16px;
 		color: var(--muted);
+		font-size: 13px;
 	}
 	.actions {
 		display: grid;
 		grid-template-columns: 1fr 2fr;
-		gap: 0.5rem;
+		gap: 10px;
+	}
+	.actions :global(button) {
+		min-height: var(--control);
+		border-radius: 12px;
+		font-size: 15px;
+	}
+	.error {
+		margin: 0 0 16px;
+		padding: 12px 14px;
+		border-radius: 12px;
+		background: var(--danger-soft);
+		font-weight: 500;
 	}
 </style>

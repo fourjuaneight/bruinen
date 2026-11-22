@@ -121,39 +121,52 @@
 <style>
 	.field {
 		display: grid;
-		gap: 0.25rem;
+		gap: 6px;
 	}
 	label {
+		font-size: 14px;
 		font-weight: 600;
 	}
 	.check {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		min-height: 2.75rem;
+		gap: 10px;
+		min-height: var(--tap);
+		font-size: 15px;
+		font-weight: 500;
 		cursor: pointer;
 	}
 	.check input {
-		width: 1.25rem;
-		height: 1.25rem;
+		width: 20px;
+		height: 20px;
+		min-height: 0;
 		margin: 0;
+		accent-color: var(--accent);
 	}
 	.required {
 		color: var(--danger);
 	}
 	.control {
 		display: flex;
-		gap: 0.5rem;
+		gap: 8px;
+	}
+	.control :global(.scan) {
+		flex: none;
+		min-height: var(--control);
+		border-color: var(--control-border);
+		border-radius: 12px;
+		color: var(--accent);
 	}
 	.hint {
 		margin: 0;
-		font-size: 0.8125rem;
 		color: var(--muted);
+		font-size: 13px;
 	}
 	.field-error {
 		margin: 0;
 		color: var(--danger);
-		font-size: 0.875rem;
+		font-size: 13px;
+		font-weight: 500;
 	}
 	[aria-invalid='true'] {
 		border-color: var(--danger);

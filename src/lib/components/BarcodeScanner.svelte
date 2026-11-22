@@ -132,21 +132,21 @@
 <style>
 	.scanner {
 		display: grid;
-		gap: 0.75rem;
+		gap: 12px;
 	}
 	video {
 		width: 100%;
 		aspect-ratio: 4 / 3;
 		object-fit: cover;
 		background: #000;
-		border-radius: 10px;
+		border-radius: 12px;
 	}
 	p {
 		margin: 0;
 	}
 	.actions {
 		display: flex;
-		gap: 0.5rem;
+		gap: 8px;
 		justify-content: flex-end;
 	}
 </style>

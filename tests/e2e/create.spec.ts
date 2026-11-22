@@ -17,7 +17,7 @@ test('creates a book with meta names and links to it', async ({ page }) => {
 	await expect(toast).toContainText('The Left Hand of Darkness');
 	await toast.getByRole('link', { name: 'View The Left Hand of Darkness' }).click();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Left Hand of Darkness');
-	await expect(page.getByText('Rock', { exact: true })).toBeVisible();
+	await expect(page.locator('dl').getByText('Rock', { exact: true })).toBeVisible();
 	await expect(page.getByText('In Progress', { exact: true })).toBeVisible();
 });
 
