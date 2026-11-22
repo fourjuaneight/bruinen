@@ -14,8 +14,8 @@ async function noViolations(page: Page) {
 
 /**
  * Controls must be at least 44×44 CSS px. Links inside running text are exempt (WCAG 2.5.8).
- * A checkbox or file input wrapped in its label is measured by the label, since tapping the
- * label works it (the cover upload's file input is visually hidden inside a button-like label).
+ * A checkbox or file input is measured by its label, since tapping the label works it (the cover
+ * upload's file input is visually hidden next to a button-like label).
  */
 async function smallTargets(page: Page) {
 	return page.evaluate(() => {
@@ -23,7 +23,7 @@ async function smallTargets(page: Page) {
 			'button, input:not([type=hidden]), select, textarea, nav a, a.button, .cards a, main > ul a';
 		const target = (el: HTMLElement) =>
 			el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'file')
-				? (el.closest('label') ?? el)
+				? (el.labels?.[0] ?? el)
 				: el;
 		return [...document.querySelectorAll<HTMLElement>(selector)]
 			.filter((el) => el.offsetParent !== null && !el.closest('dialog:not([open])'))

@@ -66,20 +66,79 @@ function fieldFor(def: CollectionDef, name: string, value: unknown): FieldDef {
 	return { name, label: humanize(name), type: 'text' };
 }
 
-/** Every non-empty field of a record, in record order, ready for a definition list. */
-export function detailFields(def: CollectionDef, record: Item): DetailField[] {
-	const fields: DetailField[] = [];
+export type Badge =
+	| { kind: 'status'; value: string; text: string }
+	| { kind: 'flag'; name: FlagName; text: string }
+	| { kind: 'vocabulary'; text: string };
+
+export interface RecordSections {
+	/** "{creator} · {year}" under the title. */
+	subtitle: string;
+	/** Status, then the flags that are set, then pick-one vocabulary values. */
+	badges: Badge[];
+	/** What the user entered: the create form's fields, minus the title, status and flags. */
+	details: DetailField[];
+	/** What Rivendell added: fields no form has. */
+	enriched: DetailField[];
+}
+
+/** Pick-one vocabulary relations, shown as outlined badges as well as in Details. */
+const VOCABULARY = ['genre', 'definition', 'platform'];
+
+const hostOf = (url: string) => {
+	try {
+		return new URL(url).hostname.replace(/^www\./, '');
+	} catch {
+		return url;
+	}
+};
+
+/** The record page's content: subtitle, badge row and the two field sections, in record order. */
+export function recordSections(def: CollectionDef, record: Item): RecordSections {
+	const inForms = new Set([...def.create, ...def.edit].map((f) => f.name));
+	const flags = new Set(def.edit.filter((f) => f.type === 'bool').map((f) => f.name));
+	// The title is the heading, the image is the cover, and the status lives in the badge row.
+	const shownElsewhere = new Set([def.titleField, def.image ?? '', 'status']);
+	const display = (name: string, raw: string) =>
+		TITLE_CASE_FIELDS.has(name) ? titleCase(raw) : raw;
+
+	const details: DetailField[] = [];
+	const enriched: DetailField[] = [];
 	for (const [name, value] of Object.entries(record)) {
-		if (SYSTEM_FIELDS.has(name)) continue;
+		if (SYSTEM_FIELDS.has(name) || shownElsewhere.has(name) || flags.has(name)) continue;
 		const shown = fieldFor(def, name, value);
 		const raw = cellText(shown, record);
 		if (!raw) continue;
-		const text = TITLE_CASE_FIELDS.has(name) ? titleCase(raw) : raw;
-		const field: DetailField = { name, label: shown.label, text };
-		if (/^https?:\/\//.test(text)) field.href = text;
-		fields.push(field);
+		const field: DetailField = { name, label: shown.label, text: display(name, raw) };
+		if (/^https?:\/\//.test(raw)) {
+			field.href = raw;
+			field.text = hostOf(raw);
+		}
+		(inForms.has(name) ? details : enriched).push(field);
 	}
-	return fields;
+
+	const text = (name: string) => {
+		const field = knownField(def, name);
+		return field ? cellText(field, record) : '';
+	};
+	const badges: Badge[] = [];
+	const status = text('status');
+	if (status) badges.push({ kind: 'status', value: status, text: titleCase(status) });
+	for (const flag of flagBadges(def, record)) {
+		badges.push({ kind: 'flag', name: flag.name, text: flag.label });
+	}
+	for (const name of VOCABULARY) {
+		const value = text(name);
+		if (value) badges.push({ kind: 'vocabulary', text: display(name, value) });
+	}
+
+	const titleColumn = def.columns.find((c) => c.name === def.titleField) ?? def.columns[0];
+	const creator = def.columns.find((c) => c !== titleColumn && c.type === 'text');
+	const subtitle = [creator ? cellText(creator, record) : '', text('year')]
+		.filter(Boolean)
+		.join(' · ');
+
+	return { subtitle, badges, details, enriched };
 }
 
 /** The extra card line for collections that have one (see CollectionDef.cardExtra). */

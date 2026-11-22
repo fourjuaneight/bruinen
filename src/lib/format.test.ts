@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCollection, type CollectionDef, type FieldDef } from './collections.ts';
-import { cellText, flagBadges, statusTone } from './format.ts';
+import { cellText, flagBadges, recordSections, statusTone } from './format.ts';
 
 const f = (type: FieldDef['type'], name = 'x'): FieldDef => ({ name, label: name, type });
 
@@ -34,35 +34,61 @@ describe('cellText', () => {
 	});
 });
 
-describe('detailFields', () => {
-	it('labels known fields, resolves relations, links URLs and skips system fields', async () => {
-		const { detailFields } = await import('./format.ts');
-		const { getCollection } = await import('./collections.ts');
-		const def = getCollection('books')!;
-		const record = {
-			id: 'b1',
-			collectionId: 'pbc',
-			collectionName: 'books',
-			title: 'Dune',
-			author: 'Frank Herbert',
-			isbn: '',
-			genre: 'g1',
-			cover: 'https://b2.example/Books/Dune.jpeg',
-			favorite: true,
-			expand: { genre: { name: 'fiction' } }
-		};
-		expect(detailFields(def, record)).toEqual([
-			{ name: 'title', label: 'Title', text: 'Dune' },
-			{ name: 'author', label: 'Author', text: 'Frank Herbert' },
-			{ name: 'genre', label: 'Genre', text: 'Fiction' },
-			{
-				name: 'cover',
-				label: 'Cover',
-				text: 'https://b2.example/Books/Dune.jpeg',
-				href: 'https://b2.example/Books/Dune.jpeg'
-			},
-			{ name: 'favorite', label: 'Favorite', text: 'Yes' }
+describe('recordSections', () => {
+	const books = getCollection('books') as CollectionDef;
+	const record = {
+		id: 'b1',
+		collectionId: 'pbc',
+		collectionName: 'books',
+		title: 'Project Hail Mary',
+		author: 'Andy Weir',
+		isbn: '9780593135204',
+		genre: 'g1',
+		status: 's1',
+		year: 2021,
+		comments: 'Hardcover.',
+		cover: 'https://b2.example/Books/Project_Hail_Mary.jpeg',
+		favorite: true,
+		publisher: 'Ballantine Books',
+		pages: 496,
+		openlibrary: 'https://www.openlibrary.org/works/OL1',
+		expand: { genre: { name: 'sci-fi' }, status: { name: 'in_progress' } }
+	};
+
+	it('puts the create-form fields under Details, minus the title, status and flags', () => {
+		const { details } = recordSections(books, record);
+		expect(details.map((f) => [f.label, f.text])).toEqual([
+			['Author', 'Andy Weir'],
+			['ISBN', '9780593135204'],
+			['Genre', 'Sci-Fi'],
+			['Year', '2021'],
+			['Comments', 'Hardcover.']
 		]);
+	});
+
+	it('puts what Rivendell added under its own section, without the cover', () => {
+		const { enriched } = recordSections(books, record);
+		expect(enriched.map((f) => f.name)).toEqual(['publisher', 'pages', 'openlibrary']);
+	});
+
+	it('links URLs by their host name', () => {
+		const link = recordSections(books, record).enriched.find((f) => f.name === 'openlibrary');
+		expect(link).toMatchObject({
+			href: 'https://www.openlibrary.org/works/OL1',
+			text: 'openlibrary.org'
+		});
+	});
+
+	it('badges the status, the flags, then the pick-one vocabulary values', () => {
+		expect(recordSections(books, record).badges).toEqual([
+			{ kind: 'status', value: 'in_progress', text: 'In Progress' },
+			{ kind: 'flag', name: 'favorite', text: 'Favorite' },
+			{ kind: 'vocabulary', text: 'Sci-Fi' }
+		]);
+	});
+
+	it('gives the subtitle as creator · year', () => {
+		expect(recordSections(books, record).subtitle).toBe('Andy Weir · 2021');
 	});
 });
 
@@ -77,26 +103,22 @@ describe('titleCase', () => {
 	});
 });
 
-describe('detailFields display formatting', () => {
-	it('title-cases genre and status, leaving other relations as stored', async () => {
-		const { detailFields } = await import('./format.ts');
-		const { getCollection } = await import('./collections.ts');
+describe('recordSections display formatting', () => {
+	it('title-cases genre, leaving other relations as stored', () => {
 		const record = {
 			id: 'm1',
 			title: 'Arrival',
 			genre: 'g1',
 			definition: 'd1',
-			status: 's1',
-			expand: {
-				genre: { name: 'sci-fi' },
-				definition: { name: '4k' },
-				status: { name: 'not_started' }
-			}
+			expand: { genre: { name: 'sci-fi' }, definition: { name: '4k' } }
 		};
 		const byName = Object.fromEntries(
-			detailFields(getCollection('movies')!, record).map((f) => [f.name, f.text])
+			recordSections(getCollection('movies') as CollectionDef, record).details.map((f) => [
+				f.name,
+				f.text
+			])
 		);
-		expect(byName).toMatchObject({ genre: 'Sci-Fi', status: 'Not Started', definition: '4k' });
+		expect(byName).toMatchObject({ genre: 'Sci-Fi', definition: '4k' });
 	});
 });
 

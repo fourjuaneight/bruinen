@@ -3,6 +3,7 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { refreshCachedImage } from '../cover-cache.ts';
 	import { coverFileError } from '../covers.ts';
+	import Icon from './Icon.svelte';
 
 	interface Props {
 		hasCover: boolean;
@@ -56,21 +57,26 @@
 	enctype="multipart/form-data"
 	use:enhance={submit}
 >
-	<label class="button" class:busy={uploading}>
-		<input
-			type="file"
-			name="cover"
-			accept="image/jpeg"
-			disabled={uploading}
-			aria-invalid={message ? 'true' : undefined}
-			aria-describedby={message ? 'cover-error' : undefined}
-			{onchange}
-		/>
+	<!-- The input comes first, so its focus ring can be drawn on the label that follows. -->
+	<input
+		id="cover"
+		class="file"
+		type="file"
+		name="cover"
+		accept="image/jpeg"
+		disabled={uploading}
+		aria-invalid={message ? 'true' : undefined}
+		aria-describedby={message ? 'cover-hint cover-error' : 'cover-hint'}
+		{onchange}
+	/>
+	<label for="cover" class="button" class:busy={uploading}>
+		<Icon name="upload" />
 		{uploading ? 'Uploading…' : hasCover ? 'Replace cover' : 'Add cover'}
 	</label>
 	{#if !hydrated}
 		<button type="submit">Upload</button>
 	{/if}
+	<p id="cover-hint" class="hint">JPEG, 10 MB or smaller</p>
 	{#if message}
 		<p id="cover-error" class="error">{message}</p>
 	{/if}
@@ -79,15 +85,15 @@
 <style>
 	form {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 0.75rem;
+		flex-direction: column;
+		gap: 10px;
+		margin: 0;
 	}
 	label {
-		position: relative;
+		width: 100%;
 	}
-	label:focus-within {
-		outline: 2px solid var(--accent);
+	.file:focus-visible + label {
+		outline: 3px solid var(--focus);
 		outline-offset: 2px;
 	}
 	label.busy {
@@ -95,7 +101,7 @@
 		cursor: progress;
 	}
 	/* Visually hidden but focusable; the label is the visible button. */
-	input {
+	.file {
 		position: absolute;
 		width: 1px;
 		height: 1px;
@@ -105,7 +111,21 @@
 		overflow: hidden;
 	}
 	p {
-		flex-basis: 100%;
 		margin: 0;
+		font-size: 13px;
+		text-align: center;
+	}
+	.hint {
+		color: var(--muted);
+	}
+	@media (max-width: 639px) {
+		label {
+			min-height: var(--control);
+			border-radius: 12px;
+			font-size: 15px;
+		}
+		.hint {
+			display: none;
+		}
 	}
 </style>
